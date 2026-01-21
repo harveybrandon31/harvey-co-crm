@@ -682,5 +682,5 @@ export const mockIntakeLinks = [
   },
 ];
 
-// Check if we're in demo mode (no authenticated user)
-export const DEMO_MODE = true;
+// Set to false for production with real database
+export const DEMO_MODE = false;
