@@ -5,6 +5,7 @@ import type { Client, TaxReturn, Dependent, Task, Document, IntakeLink } from "@
 import PipelineStatusSelector from "@/components/pipeline/PipelineStatusSelector";
 import ClientIntakeLinkSection from "@/components/intake/ClientIntakeLinkSection";
 import DocumentChecklist from "@/components/clients/DocumentChecklist";
+import DeleteClientButton from "@/components/clients/DeleteClientButton";
 
 // Extended client type for intake data
 interface ClientWithIntake extends Client {
@@ -170,13 +171,10 @@ export default async function ClientDetailPage({
             Edit
           </Link>
           {!DEMO_MODE && (
-            <button
-              type="button"
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-all"
-              disabled
-            >
-              Delete
-            </button>
+            <DeleteClientButton
+              clientId={id}
+              clientName={`${(client as Client).first_name} ${(client as Client).last_name}`}
+            />
           )}
         </div>
       </div>
