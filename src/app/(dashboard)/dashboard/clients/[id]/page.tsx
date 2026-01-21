@@ -6,6 +6,7 @@ import PipelineStatusSelector from "@/components/pipeline/PipelineStatusSelector
 import ClientIntakeLinkSection from "@/components/intake/ClientIntakeLinkSection";
 import DocumentChecklist from "@/components/clients/DocumentChecklist";
 import DeleteClientButton from "@/components/clients/DeleteClientButton";
+import SendEmailButton from "@/components/clients/SendEmailButton";
 
 // Extended client type for intake data
 interface ClientWithIntake extends Client {
@@ -164,6 +165,13 @@ export default async function ClientDetailPage({
           </p>
         </div>
         <div className="flex gap-3">
+          {!DEMO_MODE && (
+            <SendEmailButton
+              clientId={id}
+              clientName={`${(client as Client).first_name} ${(client as Client).last_name}`}
+              clientEmail={(client as Client).email}
+            />
+          )}
           <Link
             href={`/dashboard/clients/${id}/edit`}
             className="rounded-lg bg-white border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all"
