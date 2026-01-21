@@ -398,3 +398,147 @@ View Return: ${baseUrl}/dashboard/returns/${reminder.returnId}
 
   return { subject, html, text };
 }
+
+// Email signature for campaign emails
+const BRANDON_PHOTO_URL = "https://www.dropbox.com/scl/fi/ijjswkfn81jd90cxpxsef/brandon-new-photo-2.png?rlkey=lb3xnmidlbiyclr0ujtsabol2&raw=1";
+
+function getEmailSignature(): string {
+  return `
+    <table style="border-top: 2px solid ${BRAND_ACCENT}; padding-top: 20px; margin-top: 32px; width: 100%;">
+      <tr>
+        <td style="vertical-align: top; padding-right: 16px; width: 80px;">
+          <img src="${BRANDON_PHOTO_URL}" alt="Brandon Harvey" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid ${BRAND_ACCENT};" />
+        </td>
+        <td style="vertical-align: top;">
+          <p style="margin: 0 0 2px 0; font-family: 'Georgia', serif; font-size: 16px; font-weight: 600; color: #1A1A1A;">
+            Brandon Harvey
+          </p>
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: ${BRAND_PRIMARY}; font-weight: 500;">
+            Harvey & Co Financial Services
+          </p>
+          <p style="margin: 0 0 3px 0; font-size: 13px; color: #4B5563;">
+            <a href="mailto:team@harveynco.com" style="color: ${BRAND_PRIMARY}; text-decoration: none;">team@harveynco.com</a>
+          </p>
+          <p style="margin: 0 0 3px 0; font-size: 13px; color: #4B5563;">
+            <a href="tel:+17173192858" style="color: ${BRAND_PRIMARY}; text-decoration: none;">(717) 319-2858</a>
+          </p>
+          <p style="margin: 0; font-size: 12px; color: #6B7280;">
+            4331 N 12th St. Suite 103, Phoenix, AZ 85014
+          </p>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+function getEmailSignatureText(): string {
+  return `
+--
+Brandon Harvey
+Harvey & Co Financial Services
+team@harveynco.com
+(717) 319-2858
+4331 N 12th St. Suite 103, Phoenix, AZ 85014
+  `.trim();
+}
+
+// Tax Season Campaign Email (sent to clients)
+export function generateTaxSeasonCampaignEmail(
+  clientFirstName: string,
+  intakeUrl: string
+): { subject: string; html: string; text: string } {
+  const subject = "Get Your Maximum Tax Refund - Start Now!";
+
+  const content = `
+    <h2 style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-size: 24px; font-weight: 500; color: #1A1A1A;">
+      ${clientFirstName}, Your Tax Refund is Waiting!
+    </h2>
+
+    <p style="margin: 0 0 20px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      Tax season is here, and we want to make sure you get every dollar you deserve. At Harvey & Co,
+      we specialize in maximizing your refund with our extremely creative approach to tax preparation.
+    </p>
+
+    <div style="background: linear-gradient(135deg, ${BRAND_PRIMARY} 0%, #3D5A53 100%); border-radius: 12px; padding: 28px; margin: 28px 0; text-align: center;">
+      <h3 style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-size: 20px; color: white;">
+        See What You Could Get Back
+      </h3>
+      <div style="display: table; width: 100%; margin-bottom: 8px;">
+        <div style="display: table-row;">
+          <div style="display: table-cell; padding: 12px; text-align: center; width: 33%;">
+            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px;">
+              <p style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: ${BRAND_ACCENT};">$5,000+</p>
+              <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">1 Child</p>
+            </div>
+          </div>
+          <div style="display: table-cell; padding: 12px; text-align: center; width: 33%;">
+            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px;">
+              <p style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: ${BRAND_ACCENT};">$9,000+</p>
+              <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">2 Children</p>
+            </div>
+          </div>
+          <div style="display: table-cell; padding: 12px; text-align: center; width: 33%;">
+            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px;">
+              <p style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: ${BRAND_ACCENT};">$10,000+</p>
+              <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">3+ Children</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: ${BRAND_BACKGROUND}; border-left: 4px solid ${BRAND_ACCENT}; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0;">
+      <h3 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600; color: ${BRAND_PRIMARY};">
+        No Job? No Problem!
+      </h3>
+      <p style="margin: 0; color: #4B5563; line-height: 1.6;">
+        We welcome <strong>all income types</strong> - whether you're self-employed, work gig jobs,
+        receive benefits, or have any other source of income. Our team has the experience and creativity
+        to find every deduction and credit you qualify for.
+      </p>
+    </div>
+
+    <p style="margin: 24px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      Don't leave money on the table. Click below to get started with your free consultation and
+      let us show you what you could be getting back this tax season.
+    </p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${intakeUrl}"
+         style="display: inline-block; background: ${BRAND_PRIMARY}; color: white; padding: 18px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(45, 74, 67, 0.3);">
+        Get Started Now &rarr;
+      </a>
+    </div>
+
+    <p style="margin: 24px 0 0 0; font-size: 14px; color: #6B7280; text-align: center;">
+      Questions? Reply to this email or give us a call - we're here to help!
+    </p>
+
+    ${getEmailSignature()}
+  `;
+
+  const html = wrapEmailTemplate(content, `${clientFirstName}, see how much you could get back this tax season`);
+
+  const text = `
+${clientFirstName}, Your Tax Refund is Waiting!
+
+Tax season is here, and we want to make sure you get every dollar you deserve. At Harvey & Co, we specialize in maximizing your refund with our extremely creative approach to tax preparation.
+
+SEE WHAT YOU COULD GET BACK:
+- 1 Child: $5,000+
+- 2 Children: $9,000+
+- 3+ Children: $10,000+
+
+NO JOB? NO PROBLEM!
+We welcome all income types - whether you're self-employed, work gig jobs, receive benefits, or have any other source of income. Our team has the experience and creativity to find every deduction and credit you qualify for.
+
+Don't leave money on the table. Click the link below to get started with your free consultation:
+${intakeUrl}
+
+Questions? Reply to this email or give us a call - we're here to help!
+
+${getEmailSignatureText()}
+  `.trim();
+
+  return { subject, html, text };
+}

@@ -22,6 +22,22 @@ interface SendResult {
   error?: string;
 }
 
+interface CampaignStats {
+  totalClients: number;
+  clientsWithEmail: number;
+  clientsWithoutEmail: number;
+}
+
+interface CampaignResult {
+  success: boolean;
+  sent?: number;
+  failed?: number;
+  total?: number;
+  testMode?: boolean;
+  message?: string;
+  error?: string;
+}
+
 export default function SettingsPage() {
   const [reminders, setReminders] = useState<DeadlineReminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,9 +52,82 @@ export default function SettingsPage() {
   const [addingUser, setAddingUser] = useState(false);
   const [userResult, setUserResult] = useState<{ success?: string; error?: string } | null>(null);
 
+  // Campaign state
+  const [campaignStats, setCampaignStats] = useState<CampaignStats | null>(null);
+  const [loadingCampaignStats, setLoadingCampaignStats] = useState(true);
+  const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [campaignResult, setCampaignResult] = useState<CampaignResult | null>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [showConfirmSend, setShowConfirmSend] = useState(false);
+
   useEffect(() => {
     fetchReminders();
+    fetchCampaignStats();
   }, []);
+
+  async function fetchCampaignStats() {
+    setLoadingCampaignStats(true);
+    try {
+      const response = await fetch("/api/campaigns");
+      const data = await response.json();
+      if (!data.error) {
+        setCampaignStats(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch campaign stats:", error);
+    }
+    setLoadingCampaignStats(false);
+  }
+
+  async function handleSendTestEmail() {
+    if (!testEmail) return;
+    setSendingCampaign(true);
+    setCampaignResult(null);
+
+    try {
+      const response = await fetch("/api/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testMode: true, testEmail }),
+      });
+
+      const data = await response.json();
+      setCampaignResult(data);
+    } catch (error) {
+      setCampaignResult({
+        success: false,
+        error: "Failed to send test email",
+      });
+      console.error("Failed to send test email:", error);
+    }
+
+    setSendingCampaign(false);
+  }
+
+  async function handleSendCampaign() {
+    setSendingCampaign(true);
+    setCampaignResult(null);
+    setShowConfirmSend(false);
+
+    try {
+      const response = await fetch("/api/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testMode: false }),
+      });
+
+      const data = await response.json();
+      setCampaignResult(data);
+    } catch (error) {
+      setCampaignResult({
+        success: false,
+        error: "Failed to send campaign",
+      });
+      console.error("Failed to send campaign:", error);
+    }
+
+    setSendingCampaign(false);
+  }
 
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
@@ -198,6 +287,129 @@ export default function SettingsPage() {
         <p className="text-sm text-gray-500">
           Add users who need access to this CRM. They will be able to log in immediately with the credentials you provide.
         </p>
+      </div>
+
+      {/* Email Campaign Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Email Campaign
+        </h2>
+
+        <p className="text-sm text-gray-600 mb-4">
+          Send a tax season promotional email to all clients with email addresses.
+          The email highlights potential refund amounts and invites them to get started.
+        </p>
+
+        {/* Campaign Stats */}
+        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+          {loadingCampaignStats ? (
+            <p className="text-sm text-gray-500">Loading stats...</p>
+          ) : campaignStats ? (
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-semibold text-gray-900">{campaignStats.totalClients}</p>
+                <p className="text-xs text-gray-500">Total Clients</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-green-600">{campaignStats.clientsWithEmail}</p>
+                <p className="text-xs text-gray-500">With Email</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-yellow-600">{campaignStats.clientsWithoutEmail}</p>
+                <p className="text-xs text-gray-500">No Email</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-red-500">Failed to load stats</p>
+          )}
+        </div>
+
+        {/* Campaign Result */}
+        {campaignResult && (
+          <div
+            className={`mb-4 rounded-lg p-4 text-sm ${
+              campaignResult.success
+                ? "bg-green-50 text-green-700 border border-green-200"
+                : "bg-red-50 text-red-700 border border-red-200"
+            }`}
+          >
+            {campaignResult.success ? (
+              campaignResult.testMode ? (
+                <p>{campaignResult.message}</p>
+              ) : (
+                <div>
+                  <p className="font-medium">Campaign sent successfully!</p>
+                  <p className="mt-1">
+                    Sent: {campaignResult.sent} | Failed: {campaignResult.failed} | Total: {campaignResult.total}
+                  </p>
+                </div>
+              )
+            ) : (
+              <p>Error: {campaignResult.error}</p>
+            )}
+          </div>
+        )}
+
+        {/* Test Email Section */}
+        <div className="border rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-medium text-gray-900 mb-3">Send Test Email</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Send a preview to yourself before sending to all clients.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D4A43]/20 focus:border-[#2D4A43]"
+            />
+            <button
+              onClick={handleSendTestEmail}
+              disabled={sendingCampaign || !testEmail}
+              className="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {sendingCampaign ? "Sending..." : "Send Test"}
+            </button>
+          </div>
+        </div>
+
+        {/* Send Campaign Section */}
+        <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+          <h3 className="text-sm font-medium text-gray-900 mb-3">Send to All Clients</h3>
+          <p className="text-xs text-gray-600 mb-3">
+            This will send the campaign email to all {campaignStats?.clientsWithEmail || 0} clients with email addresses.
+            This action cannot be undone.
+          </p>
+
+          {!showConfirmSend ? (
+            <button
+              onClick={() => setShowConfirmSend(true)}
+              disabled={sendingCampaign || !campaignStats?.clientsWithEmail}
+              className="rounded-lg bg-[#2D4A43] px-4 py-2 text-sm font-medium text-white hover:bg-[#3D5A53] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              Send Campaign
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-orange-700">Are you sure?</span>
+              <button
+                onClick={handleSendCampaign}
+                disabled={sendingCampaign}
+                className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {sendingCampaign ? "Sending..." : `Yes, Send to ${campaignStats?.clientsWithEmail} Clients`}
+              </button>
+              <button
+                onClick={() => setShowConfirmSend(false)}
+                disabled={sendingCampaign}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Email Reminders Section */}
