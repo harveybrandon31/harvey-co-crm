@@ -3,12 +3,20 @@ import { NextResponse, type NextRequest } from "next/server";
 // Authentication enabled for production
 const AUTH_DISABLED = false;
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = ["/", "/intake"];
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Allow public routes without any auth check
+  if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + "/"))) {
+    return NextResponse.next();
+  }
+
   // When auth is disabled, redirect auth pages to dashboard
   if (AUTH_DISABLED) {
-    if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
+    if (pathname === "/login" || pathname === "/signup") {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
@@ -60,13 +68,6 @@ export async function middleware(request: NextRequest) {
   if ((pathname === "/login" || pathname === "/signup") && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
-
-  // Redirect root to dashboard or login
-  if (pathname === "/") {
-    const url = request.nextUrl.clone();
-    url.pathname = user ? "/dashboard" : "/login";
     return NextResponse.redirect(url);
   }
 
