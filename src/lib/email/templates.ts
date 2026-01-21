@@ -442,7 +442,159 @@ team@harveynco.com
   `.trim();
 }
 
-// Tax Season Campaign Email (sent to clients)
+// Campaign Email Types
+export type CampaignType = "intro" | "refund_amounts" | "urgency";
+
+export interface CampaignEmailConfig {
+  type: CampaignType;
+  name: string;
+  description: string;
+  subject: string;
+}
+
+export const CAMPAIGN_TYPES: CampaignEmailConfig[] = [
+  {
+    type: "intro",
+    name: "Introduction Email",
+    description: "Introduce yourself and your background in financial services",
+    subject: "A New Approach to Tax Preparation",
+  },
+  {
+    type: "refund_amounts",
+    name: "Refund Amounts",
+    description: "Highlight potential refund amounts based on number of children",
+    subject: "Get Your Maximum Tax Refund - Start Now!",
+  },
+  {
+    type: "urgency",
+    name: "Urgency/Deadline",
+    description: "Create urgency around tax filing deadlines",
+    subject: "Don't Miss Out on Your Tax Refund",
+  },
+];
+
+// Introduction Email - Brandon's Story
+export function generateIntroEmail(
+  clientFirstName: string,
+  intakeUrl: string
+): { subject: string; html: string; text: string } {
+  const subject = "A New Approach to Tax Preparation";
+
+  const content = `
+    <h2 style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-size: 24px; font-weight: 500; color: #1A1A1A;">
+      ${clientFirstName}, I Want to Share Something With You
+    </h2>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      You may know me as your mortgage loan officer, but I wanted to reach out about something
+      that's been on my mind for a while now.
+    </p>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      After <strong>10+ years in the financial industry</strong>, I've had a front-row seat to
+      hundreds of tax returns. Being in the middle of my clients and their tax preparers, I've
+      seen it all - the good, the bad, and unfortunately, a lot of returns done incorrectly.
+    </p>
+
+    <div style="background: ${BRAND_BACKGROUND}; border-left: 4px solid ${BRAND_ACCENT}; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0;">
+      <p style="margin: 0; color: #4B5563; line-height: 1.7; font-style: italic;">
+        "I've been ghosted by tax preparers more times than I can count. I've watched my clients
+        get left hanging with slow turnaround times and inexperience. I've seen money left on
+        the table that should have been in my clients' pockets."
+      </p>
+    </div>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      <strong>I decided enough was enough.</strong>
+    </p>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      I'm now taking everything I've learned - my decade of experience in financial services,
+      my creative approach that's helped countless clients with their loans - and applying
+      those same strategies to tax preparation.
+    </p>
+
+    <div style="background: ${BRAND_PRIMARY}; border-radius: 12px; padding: 24px; margin: 28px 0; text-align: center;">
+      <h3 style="margin: 0 0 16px 0; font-family: 'Georgia', serif; font-size: 20px; color: white;">
+        What Makes Harvey & Co Different?
+      </h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 12px; text-align: left; color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; Fast turnaround - no more waiting weeks
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; text-align: left; color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; Direct communication - I actually respond
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; text-align: left; color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; Creative strategies to maximize your refund
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; text-align: left; color: white;">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; 10+ years of financial industry experience
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="margin: 24px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      I'd love the opportunity to show you what a different experience looks like.
+      Click below to get started - it only takes a few minutes.
+    </p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${intakeUrl}"
+         style="display: inline-block; background: ${BRAND_PRIMARY}; color: white; padding: 18px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(45, 74, 67, 0.3);">
+        Let's Get Started &rarr;
+      </a>
+    </div>
+
+    <p style="margin: 24px 0 0 0; font-size: 14px; color: #6B7280; text-align: center;">
+      Have questions? Just reply to this email - I personally read every response.
+    </p>
+
+    ${getEmailSignature()}
+  `;
+
+  const html = wrapEmailTemplate(content, `${clientFirstName}, I want to share my story with you`);
+
+  const text = `
+${clientFirstName}, I Want to Share Something With You
+
+You may know me as your mortgage loan officer, but I wanted to reach out about something that's been on my mind for a while now.
+
+After 10+ years in the financial industry, I've had a front-row seat to hundreds of tax returns. Being in the middle of my clients and their tax preparers, I've seen it all - the good, the bad, and unfortunately, a lot of returns done incorrectly.
+
+"I've been ghosted by tax preparers more times than I can count. I've watched my clients get left hanging with slow turnaround times and inexperience. I've seen money left on the table that should have been in my clients' pockets."
+
+I decided enough was enough.
+
+I'm now taking everything I've learned - my decade of experience in financial services, my creative approach that's helped countless clients with their loans - and applying those same strategies to tax preparation.
+
+WHAT MAKES HARVEY & CO DIFFERENT?
+✓ Fast turnaround - no more waiting weeks
+✓ Direct communication - I actually respond
+✓ Creative strategies to maximize your refund
+✓ 10+ years of financial industry experience
+
+I'd love the opportunity to show you what a different experience looks like. Click below to get started - it only takes a few minutes.
+
+${intakeUrl}
+
+Have questions? Just reply to this email - I personally read every response.
+
+${getEmailSignatureText()}
+  `.trim();
+
+  return { subject, html, text };
+}
+
+// Tax Season Campaign Email - Refund Amounts (sent to clients)
 export function generateTaxSeasonCampaignEmail(
   clientFirstName: string,
   intakeUrl: string
@@ -459,32 +611,29 @@ export function generateTaxSeasonCampaignEmail(
       we specialize in maximizing your refund with our extremely creative approach to tax preparation.
     </p>
 
-    <div style="background: linear-gradient(135deg, ${BRAND_PRIMARY} 0%, #3D5A53 100%); border-radius: 12px; padding: 28px; margin: 28px 0; text-align: center;">
-      <h3 style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-size: 20px; color: white;">
+    <div style="background: ${BRAND_PRIMARY}; border-radius: 12px; padding: 28px; margin: 28px 0;">
+      <h3 style="margin: 0 0 8px 0; font-family: 'Georgia', serif; font-size: 20px; color: white; text-align: center;">
         See What You Could Get Back
       </h3>
-      <div style="display: table; width: 100%; margin-bottom: 8px;">
-        <div style="display: table-row;">
-          <div style="display: table-cell; padding: 12px; text-align: center; width: 33%;">
-            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px;">
-              <p style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: ${BRAND_ACCENT};">$5,000+</p>
-              <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">1 Child</p>
-            </div>
-          </div>
-          <div style="display: table-cell; padding: 12px; text-align: center; width: 33%;">
-            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px;">
-              <p style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: ${BRAND_ACCENT};">$9,000+</p>
-              <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">2 Children</p>
-            </div>
-          </div>
-          <div style="display: table-cell; padding: 12px; text-align: center; width: 33%;">
-            <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px;">
-              <p style="margin: 0 0 8px 0; font-size: 32px; font-weight: 700; color: ${BRAND_ACCENT};">$10,000+</p>
-              <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">3+ Children</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <p style="margin: 0 0 20px 0; font-size: 14px; color: rgba(255,255,255,0.8); text-align: center;">
+        Based on qualifying tax credits for families
+      </p>
+      <table style="width: 100%; border-collapse: separate; border-spacing: 8px;">
+        <tr>
+          <td style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; text-align: center; width: 33%;">
+            <p style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: ${BRAND_ACCENT};">$5,000+</p>
+            <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">1 Child</p>
+          </td>
+          <td style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; text-align: center; width: 33%;">
+            <p style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: ${BRAND_ACCENT};">$9,000+</p>
+            <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">2 Children</p>
+          </td>
+          <td style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px; text-align: center; width: 33%;">
+            <p style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; color: ${BRAND_ACCENT};">$10,000+</p>
+            <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9);">3+ Children</p>
+          </td>
+        </tr>
+      </table>
     </div>
 
     <div style="background: ${BRAND_BACKGROUND}; border-left: 4px solid ${BRAND_ACCENT}; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0;">
@@ -524,7 +673,9 @@ ${clientFirstName}, Your Tax Refund is Waiting!
 
 Tax season is here, and we want to make sure you get every dollar you deserve. At Harvey & Co, we specialize in maximizing your refund with our extremely creative approach to tax preparation.
 
-SEE WHAT YOU COULD GET BACK:
+SEE WHAT YOU COULD GET BACK
+(Based on qualifying tax credits for families)
+
 - 1 Child: $5,000+
 - 2 Children: $9,000+
 - 3+ Children: $10,000+
@@ -541,4 +692,131 @@ ${getEmailSignatureText()}
   `.trim();
 
   return { subject, html, text };
+}
+
+// Urgency Email - Deadline focused
+export function generateUrgencyEmail(
+  clientFirstName: string,
+  intakeUrl: string
+): { subject: string; html: string; text: string } {
+  const subject = "Don't Miss Out on Your Tax Refund";
+
+  const content = `
+    <h2 style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-size: 24px; font-weight: 500; color: #1A1A1A;">
+      ${clientFirstName}, Time is Running Out
+    </h2>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      Tax season is in full swing, and every day you wait is another day your refund sits unclaimed.
+      I wanted to reach out one more time because I don't want you to miss out.
+    </p>
+
+    <div style="background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #92400E; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
+        Important Reminder
+      </p>
+      <p style="margin: 0; font-size: 18px; color: #78350F; font-weight: 500;">
+        The sooner you file, the sooner you get your money
+      </p>
+    </div>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      At Harvey & Co, we pride ourselves on <strong>fast turnaround times</strong>. While other
+      preparers leave you waiting for weeks, we get your return done quickly and accurately -
+      so you can get your refund deposited ASAP.
+    </p>
+
+    <div style="background: ${BRAND_PRIMARY}; border-radius: 12px; padding: 24px; margin: 28px 0;">
+      <h3 style="margin: 0 0 16px 0; font-family: 'Georgia', serif; font-size: 18px; color: white; text-align: center;">
+        What Are You Waiting For?
+      </h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 10px 12px; text-align: left; color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; Get up to $5,000+ with 1 child
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; text-align: left; color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; Get up to $9,000+ with 2 children
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; text-align: left; color: white; border-bottom: 1px solid rgba(255,255,255,0.2);">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; Get up to $10,000+ with 3+ children
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; text-align: left; color: white;">
+            <strong style="color: ${BRAND_ACCENT};">✓</strong> &nbsp; All income types welcome - no job, no problem!
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="margin: 24px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      It takes just a few minutes to get started. Don't let another day go by -
+      click below and let's get your refund on its way.
+    </p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${intakeUrl}"
+         style="display: inline-block; background: #F59E0B; color: white; padding: 18px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);">
+        Claim Your Refund Now &rarr;
+      </a>
+    </div>
+
+    <p style="margin: 24px 0 0 0; font-size: 14px; color: #6B7280; text-align: center;">
+      Questions? Reply to this email or call me directly - I'm here to help!
+    </p>
+
+    ${getEmailSignature()}
+  `;
+
+  const html = wrapEmailTemplate(content, `${clientFirstName}, don't miss out on your tax refund`);
+
+  const text = `
+${clientFirstName}, Time is Running Out
+
+Tax season is in full swing, and every day you wait is another day your refund sits unclaimed. I wanted to reach out one more time because I don't want you to miss out.
+
+IMPORTANT REMINDER
+The sooner you file, the sooner you get your money
+
+At Harvey & Co, we pride ourselves on fast turnaround times. While other preparers leave you waiting for weeks, we get your return done quickly and accurately - so you can get your refund deposited ASAP.
+
+WHAT ARE YOU WAITING FOR?
+✓ Get up to $5,000+ with 1 child
+✓ Get up to $9,000+ with 2 children
+✓ Get up to $10,000+ with 3+ children
+✓ All income types welcome - no job, no problem!
+
+It takes just a few minutes to get started. Don't let another day go by - click below and let's get your refund on its way.
+
+${intakeUrl}
+
+Questions? Reply to this email or call me directly - I'm here to help!
+
+${getEmailSignatureText()}
+  `.trim();
+
+  return { subject, html, text };
+}
+
+// Helper function to generate campaign email by type
+export function generateCampaignEmail(
+  type: CampaignType,
+  clientFirstName: string,
+  intakeUrl: string
+): { subject: string; html: string; text: string } {
+  switch (type) {
+    case "intro":
+      return generateIntroEmail(clientFirstName, intakeUrl);
+    case "refund_amounts":
+      return generateTaxSeasonCampaignEmail(clientFirstName, intakeUrl);
+    case "urgency":
+      return generateUrgencyEmail(clientFirstName, intakeUrl);
+    default:
+      return generateTaxSeasonCampaignEmail(clientFirstName, intakeUrl);
+  }
 }

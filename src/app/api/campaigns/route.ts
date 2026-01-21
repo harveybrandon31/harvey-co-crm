@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/resend";
-import { generateTaxSeasonCampaignEmail } from "@/lib/email/templates";
+import { generateCampaignEmail, CAMPAIGN_TYPES, CampaignType } from "@/lib/email/templates";
 
 interface Client {
   id: string;
@@ -38,6 +38,7 @@ export async function GET() {
     totalClients: totalClients || 0,
     clientsWithEmail: clientsWithEmail || 0,
     clientsWithoutEmail: (totalClients || 0) - (clientsWithEmail || 0),
+    campaignTypes: CAMPAIGN_TYPES,
   });
 }
 
@@ -58,12 +59,14 @@ export async function POST(request: NextRequest) {
   let testMode = false;
   let testEmail = "";
   let batchSize = 10; // Send in batches to avoid rate limits
+  let campaignType: CampaignType = "intro";
 
   try {
     const body = await request.json();
     testMode = body.testMode || false;
     testEmail = body.testEmail || "";
     batchSize = body.batchSize || 10;
+    campaignType = body.campaignType || "intro";
   } catch {
     // Use defaults
   }
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const emailContent = generateTaxSeasonCampaignEmail("Test User", intakeUrl);
+    const emailContent = generateCampaignEmail(campaignType, "Test User", intakeUrl);
     const result = await sendEmail({
       to: testEmail,
       subject: emailContent.subject,
@@ -99,7 +102,8 @@ export async function POST(request: NextRequest) {
       success: true,
       testMode: true,
       sent: 1,
-      message: `Test email sent to ${testEmail}`,
+      campaignType,
+      message: `Test email (${campaignType}) sent to ${testEmail}`,
     });
   }
 
@@ -136,7 +140,7 @@ export async function POST(request: NextRequest) {
         if (!client.email) return { success: false, email: "", error: "No email" };
 
         const firstName = client.first_name || "Valued Client";
-        const emailContent = generateTaxSeasonCampaignEmail(firstName, intakeUrl);
+        const emailContent = generateCampaignEmail(campaignType, firstName, intakeUrl);
 
         try {
           const result = await sendEmail({
@@ -183,6 +187,7 @@ export async function POST(request: NextRequest) {
     sent,
     failed,
     total: clients.length,
+    campaignType,
     errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Only return first 10 errors
   });
 }

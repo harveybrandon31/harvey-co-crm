@@ -22,10 +22,18 @@ interface SendResult {
   error?: string;
 }
 
+interface CampaignType {
+  type: string;
+  name: string;
+  description: string;
+  subject: string;
+}
+
 interface CampaignStats {
   totalClients: number;
   clientsWithEmail: number;
   clientsWithoutEmail: number;
+  campaignTypes: CampaignType[];
 }
 
 interface CampaignResult {
@@ -36,6 +44,7 @@ interface CampaignResult {
   testMode?: boolean;
   message?: string;
   error?: string;
+  campaignType?: string;
 }
 
 export default function SettingsPage() {
@@ -59,6 +68,7 @@ export default function SettingsPage() {
   const [campaignResult, setCampaignResult] = useState<CampaignResult | null>(null);
   const [testEmail, setTestEmail] = useState("");
   const [showConfirmSend, setShowConfirmSend] = useState(false);
+  const [selectedCampaignType, setSelectedCampaignType] = useState("intro");
 
   useEffect(() => {
     fetchReminders();
@@ -88,7 +98,7 @@ export default function SettingsPage() {
       const response = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testMode: true, testEmail }),
+        body: JSON.stringify({ testMode: true, testEmail, campaignType: selectedCampaignType }),
       });
 
       const data = await response.json();
@@ -113,7 +123,7 @@ export default function SettingsPage() {
       const response = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testMode: false }),
+        body: JSON.stringify({ testMode: false, campaignType: selectedCampaignType }),
       });
 
       const data = await response.json();
@@ -296,8 +306,8 @@ export default function SettingsPage() {
         </h2>
 
         <p className="text-sm text-gray-600 mb-4">
-          Send a tax season promotional email to all clients with email addresses.
-          The email highlights potential refund amounts and invites them to get started.
+          Send promotional emails to all clients with email addresses.
+          Choose from different campaign types below.
         </p>
 
         {/* Campaign Stats */}
@@ -322,6 +332,37 @@ export default function SettingsPage() {
           ) : (
             <p className="text-sm text-red-500">Failed to load stats</p>
           )}
+        </div>
+
+        {/* Campaign Type Selection */}
+        <div className="border rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-medium text-gray-900 mb-3">Select Campaign Type</h3>
+          <div className="space-y-2">
+            {campaignStats?.campaignTypes?.map((campaign) => (
+              <label
+                key={campaign.type}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  selectedCampaignType === campaign.type
+                    ? "border-[#2D4A43] bg-[#2D4A43]/5"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="campaignType"
+                  value={campaign.type}
+                  checked={selectedCampaignType === campaign.type}
+                  onChange={(e) => setSelectedCampaignType(e.target.value)}
+                  className="mt-1 text-[#2D4A43] focus:ring-[#2D4A43]"
+                />
+                <div>
+                  <p className="font-medium text-gray-900">{campaign.name}</p>
+                  <p className="text-xs text-gray-500">{campaign.description}</p>
+                  <p className="text-xs text-gray-400 mt-1">Subject: {campaign.subject}</p>
+                </div>
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Campaign Result */}
