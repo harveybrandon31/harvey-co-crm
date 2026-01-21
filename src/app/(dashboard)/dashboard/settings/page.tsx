@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createUser } from "./actions";
+import DripCampaignSection from "@/components/campaigns/DripCampaignSection";
 
 interface DeadlineReminder {
   clientName: string;
@@ -452,6 +453,9 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Drip Campaign Section */}
+      <DripCampaignSection />
 
       {/* Email Reminders Section */}
       <div className="bg-white shadow rounded-lg p-6">
