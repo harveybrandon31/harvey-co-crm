@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// TEMPORARY: Authentication disabled for preview
-// TODO: Re-enable authentication before production use
-const AUTH_DISABLED = true;
+// Authentication enabled for production
+const AUTH_DISABLED = false;
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
