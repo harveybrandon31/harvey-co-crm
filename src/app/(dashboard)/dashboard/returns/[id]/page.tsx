@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { mockTaxReturns, mockClients, DEMO_MODE } from "@/lib/mock-data";
 import { deleteTaxReturn } from "../actions";
 
 interface TaxReturnWithClient {
@@ -35,19 +36,35 @@ export default async function ReturnDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("tax_returns")
-    .select("*, clients(id, first_name, last_name)")
-    .eq("id", id)
-    .single();
+  let taxReturn: TaxReturnWithClient | null = null;
 
-  if (!data) {
-    notFound();
+  if (DEMO_MODE) {
+    const returnData = mockTaxReturns.find((r) => r.id === id);
+    if (returnData) {
+      const client = mockClients.find((c) => c.id === returnData.client_id);
+      taxReturn = {
+        ...returnData,
+        clients: {
+          id: client?.id || "",
+          first_name: client?.first_name || "",
+          last_name: client?.last_name || "",
+        },
+      };
+    }
+  } else {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("tax_returns")
+      .select("*, clients(id, first_name, last_name)")
+      .eq("id", id)
+      .single();
+    taxReturn = data as unknown as TaxReturnWithClient;
   }
 
-  const taxReturn = data as unknown as TaxReturnWithClient;
+  if (!taxReturn) {
+    notFound();
+  }
   const deleteReturnWithId = deleteTaxReturn.bind(null, id);
 
   const statusColors: Record<string, string> = {

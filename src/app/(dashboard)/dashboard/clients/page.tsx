@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { mockClients, DEMO_MODE } from "@/lib/mock-data";
 import type { Client } from "@/lib/types";
 
 export default async function ClientsPage({
@@ -8,24 +8,48 @@ export default async function ClientsPage({
   searchParams: Promise<{ search?: string; status?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
 
-  let query = supabase
-    .from("clients")
-    .select("*")
-    .order("last_name", { ascending: true });
+  let clients: Client[] | null = null;
 
-  if (params.search) {
-    query = query.or(
-      `first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%,email.ilike.%${params.search}%`
-    );
+  if (DEMO_MODE) {
+    // Use mock data in demo mode
+    clients = [...mockClients].sort((a, b) => a.last_name.localeCompare(b.last_name));
+
+    if (params.search) {
+      const search = params.search.toLowerCase();
+      clients = clients.filter(
+        (c) =>
+          c.first_name.toLowerCase().includes(search) ||
+          c.last_name.toLowerCase().includes(search) ||
+          (c.email && c.email.toLowerCase().includes(search))
+      );
+    }
+
+    if (params.status && params.status !== "all") {
+      clients = clients.filter((c) => c.status === params.status);
+    }
+  } else {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+
+    let query = supabase
+      .from("clients")
+      .select("*")
+      .order("last_name", { ascending: true });
+
+    if (params.search) {
+      query = query.or(
+        `first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%,email.ilike.%${params.search}%`
+      );
+    }
+
+    if (params.status && params.status !== "all") {
+      query = query.eq("status", params.status);
+    }
+
+    const { data } = await query;
+    clients = data;
   }
-
-  if (params.status && params.status !== "all") {
-    query = query.eq("status", params.status);
-  }
-
-  const { data: clients } = await query;
 
   return (
     <div>

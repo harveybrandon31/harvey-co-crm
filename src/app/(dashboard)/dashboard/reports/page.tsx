@@ -1,14 +1,16 @@
 import { Suspense } from "react";
 import ReportsTabs from "./ReportsTabs";
 
-export default function ReportsPage({
+export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string; year?: string }>;
 }) {
+  const params = await searchParams;
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+      <h1 className="font-brand-heading text-2xl font-semibold text-gray-900">Reports</h1>
 
       <Suspense
         fallback={
@@ -17,7 +19,7 @@ export default function ReportsPage({
           </div>
         }
       >
-        <ReportsTabs searchParams={searchParams} />
+        <ReportsTabs initialTab={params.tab} initialYear={params.year} />
       </Suspense>
     </div>
   );

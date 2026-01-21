@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   getRevenueReport,
@@ -39,16 +39,14 @@ const monthNames = [
 ];
 
 export default function ReportsTabs({
-  searchParams,
+  initialTab,
+  initialYear,
 }: {
-  searchParams: Promise<{ tab?: string; year?: string }>;
+  initialTab?: string;
+  initialYear?: string;
 }) {
-  const params = use(searchParams);
-  const initialTab = (params.tab as TabType) || "revenue";
-  const initialYear = params.year ? parseInt(params.year) : new Date().getFullYear();
-
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
-  const [year, setYear] = useState(initialYear);
+  const [activeTab, setActiveTab] = useState<TabType>((initialTab as TabType) || "revenue");
+  const [year, setYear] = useState(initialYear ? parseInt(initialYear) : new Date().getFullYear());
 
   return (
     <div className="space-y-6">

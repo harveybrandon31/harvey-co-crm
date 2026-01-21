@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import DocumentUploadForm from "@/components/DocumentUploadForm";
 import DocumentList from "@/components/DocumentList";
+import { mockClients, mockDocuments, mockTaxReturns, DEMO_MODE } from "@/lib/mock-data";
 import type { Client } from "@/lib/types";
 
 interface DocumentWithRelations {
@@ -30,40 +31,79 @@ export default async function DocumentsPage({
   searchParams: Promise<{ client_id?: string; return_id?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
 
-  // Get clients for the upload form
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("status", "active")
-    .order("last_name", { ascending: true });
-
-  // Get documents with filters
-  let query = supabase
-    .from("documents")
-    .select("*, clients(id, first_name, last_name), tax_returns(id, tax_year, return_type)")
-    .order("created_at", { ascending: false });
-
-  if (params.client_id) {
-    query = query.eq("client_id", params.client_id);
-  }
-
-  if (params.return_id) {
-    query = query.eq("tax_return_id", params.return_id);
-  }
-
-  const { data: documents } = await query;
-
-  // Get tax returns if client is selected
+  let clients: Client[] = [];
+  let documents: DocumentWithRelations[] = [];
   let taxReturns: { id: string; tax_year: number; return_type: string }[] = [];
-  if (params.client_id) {
-    const { data } = await supabase
-      .from("tax_returns")
-      .select("id, tax_year, return_type")
-      .eq("client_id", params.client_id)
-      .order("tax_year", { ascending: false });
-    taxReturns = data || [];
+
+  if (DEMO_MODE) {
+    clients = mockClients.filter((c) => c.status === "active");
+
+    documents = mockDocuments.map((doc) => {
+      const client = mockClients.find((c) => c.id === doc.client_id);
+      const taxReturn = doc.tax_return_id
+        ? mockTaxReturns.find((r) => r.id === doc.tax_return_id)
+        : null;
+      return {
+        ...doc,
+        clients: {
+          id: client?.id || "",
+          first_name: client?.first_name || "",
+          last_name: client?.last_name || "",
+        },
+        tax_returns: taxReturn
+          ? { id: taxReturn.id, tax_year: taxReturn.tax_year, return_type: taxReturn.return_type }
+          : null,
+      };
+    });
+
+    if (params.client_id) {
+      documents = documents.filter((d) => d.clients.id === params.client_id);
+      taxReturns = mockTaxReturns
+        .filter((r) => r.client_id === params.client_id)
+        .map((r) => ({ id: r.id, tax_year: r.tax_year, return_type: r.return_type }));
+    }
+
+    if (params.return_id) {
+      documents = documents.filter((d) => d.tax_returns?.id === params.return_id);
+    }
+  } else {
+    const supabase = await createClient();
+
+    // Get clients for the upload form
+    const { data: clientsData } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("status", "active")
+      .order("last_name", { ascending: true });
+    clients = (clientsData as Client[]) || [];
+
+    // Get documents with filters
+    let query = supabase
+      .from("documents")
+      .select("*, clients(id, first_name, last_name), tax_returns(id, tax_year, return_type)")
+      .order("created_at", { ascending: false });
+
+    if (params.client_id) {
+      query = query.eq("client_id", params.client_id);
+    }
+
+    if (params.return_id) {
+      query = query.eq("tax_return_id", params.return_id);
+    }
+
+    const { data: docsData } = await query;
+    documents = (docsData as unknown as DocumentWithRelations[]) || [];
+
+    // Get tax returns if client is selected
+    if (params.client_id) {
+      const { data } = await supabase
+        .from("tax_returns")
+        .select("id, tax_year, return_type")
+        .eq("client_id", params.client_id)
+        .order("tax_year", { ascending: false });
+      taxReturns = data || [];
+    }
   }
 
   return (
@@ -106,13 +146,13 @@ export default async function DocumentsPage({
               </form>
             </div>
 
-            <DocumentList documents={(documents as unknown as DocumentWithRelations[]) || []} />
+            <DocumentList documents={documents} />
           </div>
         </div>
 
         <div>
           <DocumentUploadForm
-            clients={(clients as Client[]) || []}
+            clients={clients}
             taxReturns={taxReturns}
             defaultClientId={params.client_id}
             defaultReturnId={params.return_id}

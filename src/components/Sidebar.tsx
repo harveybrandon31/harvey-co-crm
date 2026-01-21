@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
+  { name: "Pipeline", href: "/dashboard/pipeline", icon: KanbanIcon },
   { name: "Clients", href: "/dashboard/clients", icon: UsersIcon },
+  { name: "Tasks", href: "/dashboard/tasks", icon: TasksIcon },
+  { name: "Intake Links", href: "/dashboard/intake-links", icon: LinkIcon },
   { name: "Tax Returns", href: "/dashboard/returns", icon: DocumentIcon },
   { name: "Invoices", href: "/dashboard/invoices", icon: InvoiceIcon },
   { name: "Documents", href: "/dashboard/documents", icon: FolderIcon },
@@ -70,15 +73,46 @@ function ReportsIcon({ className }: { className?: string }) {
   );
 }
 
+function LinkIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+    </svg>
+  );
+}
+
+function KanbanIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125Z" />
+    </svg>
+  );
+}
+
+function TasksIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full w-64 flex-col bg-gray-900">
-      <div className="flex h-16 shrink-0 items-center px-6">
-        <span className="text-xl font-bold text-white">Harvey & Co</span>
+    <div className="flex h-full w-64 flex-col bg-[#2D4A43]">
+      <div className="flex h-16 shrink-0 items-center px-6 border-b border-white/10">
+        <div>
+          <h1 className="font-brand-heading text-xl font-semibold text-white tracking-wide">
+            Harvey <span className="font-light">&</span> Co
+          </h1>
+          <p className="text-[10px] text-white/60 tracking-wider uppercase">
+            Financial Services
+          </p>
+        </div>
       </div>
-      <nav className="flex flex-1 flex-col px-4 py-4">
+      <nav className="flex flex-1 flex-col px-3 py-4">
         <ul className="flex flex-1 flex-col gap-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href ||
@@ -87,10 +121,10 @@ export default function Sidebar() {
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`group flex gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`group flex gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                     isActive
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                      ? "bg-white/15 text-white shadow-sm"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
@@ -101,6 +135,17 @@ export default function Sidebar() {
           })}
         </ul>
       </nav>
+      <div className="px-3 py-4 border-t border-white/10">
+        <div className="flex items-center gap-3 px-3 py-2">
+          <div className="h-8 w-8 rounded-full bg-[#C9A962] flex items-center justify-center">
+            <span className="text-xs font-semibold text-[#2D4A43]">H</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">Tax Season 2025</p>
+            <p className="text-xs text-white/60">Active</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

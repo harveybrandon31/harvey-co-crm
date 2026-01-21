@@ -15,7 +15,8 @@
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.6.0",
-    "resend": "^6.7.0"
+    "resend": "^6.7.0",
+    "vercel": "^50.4.5"
   },
   "devDependencies": {
     "@types/node": "^20",

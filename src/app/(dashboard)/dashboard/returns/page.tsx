@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { mockTaxReturns, mockClients, DEMO_MODE } from "@/lib/mock-data";
 
 interface TaxReturnWithClient {
   id: string;
@@ -20,22 +21,54 @@ export default async function ReturnsPage({
   searchParams: Promise<{ year?: string; status?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
 
-  let query = supabase
-    .from("tax_returns")
-    .select("id, tax_year, return_type, status, due_date, clients(id, first_name, last_name)")
-    .order("tax_year", { ascending: false });
+  let returns: TaxReturnWithClient[] | null = null;
 
-  if (params.year && params.year !== "all") {
-    query = query.eq("tax_year", parseInt(params.year));
+  if (DEMO_MODE) {
+    returns = mockTaxReturns
+      .map((r) => {
+        const client = mockClients.find((c) => c.id === r.client_id);
+        return {
+          id: r.id,
+          tax_year: r.tax_year,
+          return_type: r.return_type,
+          status: r.status,
+          due_date: r.due_date,
+          clients: {
+            id: client?.id || "",
+            first_name: client?.first_name || "",
+            last_name: client?.last_name || "",
+          },
+        };
+      })
+      .sort((a, b) => b.tax_year - a.tax_year);
+
+    if (params.year && params.year !== "all") {
+      returns = returns.filter((r) => r.tax_year === parseInt(params.year!));
+    }
+
+    if (params.status && params.status !== "all") {
+      returns = returns.filter((r) => r.status === params.status);
+    }
+  } else {
+    const supabase = await createClient();
+
+    let query = supabase
+      .from("tax_returns")
+      .select("id, tax_year, return_type, status, due_date, clients(id, first_name, last_name)")
+      .order("tax_year", { ascending: false });
+
+    if (params.year && params.year !== "all") {
+      query = query.eq("tax_year", parseInt(params.year));
+    }
+
+    if (params.status && params.status !== "all") {
+      query = query.eq("status", params.status);
+    }
+
+    const { data } = await query;
+    returns = data as unknown as TaxReturnWithClient[];
   }
-
-  if (params.status && params.status !== "all") {
-    query = query.eq("status", params.status);
-  }
-
-  const { data: returns } = await query;
 
   const currentYear = new Date().getFullYear();
   const years = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ClientForm from "@/components/ClientForm";
 import { updateClient } from "../../actions";
+import { mockClients, DEMO_MODE } from "@/lib/mock-data";
 import type { Client } from "@/lib/types";
 
 export default async function EditClientPage({
@@ -11,13 +12,20 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const { data: client } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("id", id)
-    .single();
+  let client: Client | null = null;
+
+  if (DEMO_MODE) {
+    client = mockClients.find((c) => c.id === id) || null;
+  } else {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("id", id)
+      .single();
+    client = data as Client;
+  }
 
   if (!client) {
     notFound();

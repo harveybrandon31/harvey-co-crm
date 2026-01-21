@@ -131,3 +131,85 @@ export interface Invoice {
   notes: string | null;
   user_id: string;
 }
+
+// Intake System Types
+export type PipelineStatus =
+  | "new_intake"
+  | "documents_requested"
+  | "documents_received"
+  | "in_preparation"
+  | "review_needed"
+  | "pending_client_approval"
+  | "ready_to_file"
+  | "filed"
+  | "completed";
+
+export interface Dependent {
+  id: string;
+  created_at: string;
+  client_id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string | null;
+  ssn_encrypted: string | null;
+  relationship: string | null;
+  months_lived_with: number | null;
+}
+
+export interface IntakeResponse {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  client_id: string;
+  tax_year: number;
+  step_number: number;
+  question_key: string;
+  response_value: unknown;
+  response_type: string;
+}
+
+export interface IntakeLink {
+  id: string;
+  created_at: string;
+  client_id: string | null;
+  token: string;
+  email: string | null;
+  expires_at: string;
+  used_at: string | null;
+  created_by: string | null;
+  prefill_first_name: string | null;
+  prefill_last_name: string | null;
+}
+
+export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
+export interface Task {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  client_id: string | null;
+  tax_return_id: string | null;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  due_date: string | null;
+  assigned_to: string | null;
+  completed_at: string | null;
+}
+
+// Extended Client type with intake fields
+export interface ClientWithIntake extends Client {
+  date_of_birth: string | null;
+  ssn_encrypted: string | null;
+  has_spouse: boolean;
+  spouse_first_name: string | null;
+  spouse_last_name: string | null;
+  spouse_dob: string | null;
+  spouse_ssn_encrypted: string | null;
+  intake_completed: boolean;
+  intake_completed_at: string | null;
+  account_created: boolean;
+  pipeline_status: PipelineStatus;
+}

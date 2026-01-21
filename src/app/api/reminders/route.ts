@@ -5,6 +5,7 @@ import {
   generateDeadlineReminderEmail,
   type DeadlineReminder,
 } from "@/lib/email/templates";
+import { mockTaxReturns, mockClients, DEMO_MODE } from "@/lib/mock-data";
 
 interface TaxReturnWithClient {
   id: string;
@@ -28,8 +29,60 @@ function getDaysUntil(dateString: string | null): number | null {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
+function getRemindersFromData(data: TaxReturnWithClient[]): DeadlineReminder[] {
+  return data
+    .map((r) => {
+      const effectiveDate = r.extended_due_date || r.due_date;
+      const daysUntil = getDaysUntil(effectiveDate);
+
+      if (daysUntil === null) return null;
+
+      return {
+        clientName: `${r.clients.first_name} ${r.clients.last_name}`,
+        taxYear: r.tax_year,
+        returnType: r.return_type,
+        dueDate: effectiveDate ? new Date(effectiveDate).toLocaleDateString() : "Not set",
+        daysUntil,
+        status: r.status,
+        returnId: r.id,
+      };
+    })
+    .filter((r): r is DeadlineReminder => r !== null)
+    .sort((a, b) => a.daysUntil - b.daysUntil);
+}
+
 // GET - Fetch upcoming deadlines (for manual check)
 export async function GET(request: NextRequest) {
+  // In demo mode, skip auth and return mock data
+  if (DEMO_MODE) {
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + 30);
+
+    const pendingStatuses = ["not_started", "in_progress", "pending_review", "pending_client", "ready_to_file"];
+
+    const mockData: TaxReturnWithClient[] = mockTaxReturns
+      .filter((r) => pendingStatuses.includes(r.status) && r.due_date)
+      .map((r) => {
+        const client = mockClients.find((c) => c.id === r.client_id);
+        return {
+          id: r.id,
+          tax_year: r.tax_year,
+          return_type: r.return_type,
+          due_date: r.due_date,
+          extended_due_date: r.extended_due_date,
+          status: r.status,
+          clients: {
+            first_name: client?.first_name || "",
+            last_name: client?.last_name || "",
+          },
+        };
+      });
+
+    const reminders = getRemindersFromData(mockData);
+    return NextResponse.json({ reminders, count: reminders.length });
+  }
+
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -62,26 +115,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const reminders: DeadlineReminder[] = ((data || []) as unknown as TaxReturnWithClient[])
-    .map((r) => {
-      const effectiveDate = r.extended_due_date || r.due_date;
-      const daysUntil = getDaysUntil(effectiveDate);
-
-      if (daysUntil === null) return null;
-
-      return {
-        clientName: `${r.clients.first_name} ${r.clients.last_name}`,
-        taxYear: r.tax_year,
-        returnType: r.return_type,
-        dueDate: effectiveDate ? new Date(effectiveDate).toLocaleDateString() : "Not set",
-        daysUntil,
-        status: r.status,
-        returnId: r.id,
-      };
-    })
-    .filter((r): r is DeadlineReminder => r !== null)
-    .sort((a, b) => a.daysUntil - b.daysUntil);
-
+  const reminders = getRemindersFromData((data || []) as unknown as TaxReturnWithClient[]);
   return NextResponse.json({ reminders, count: reminders.length });
 }
 

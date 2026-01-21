@@ -1,7 +1,25 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// TEMPORARY: Authentication disabled for preview
+// TODO: Re-enable authentication before production use
+const AUTH_DISABLED = true;
+
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // When auth is disabled, redirect auth pages to dashboard
+  if (AUTH_DISABLED) {
+    if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  // --- Original auth code below (currently bypassed) ---
+  const { createServerClient } = await import("@supabase/ssr");
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -31,8 +49,6 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired
   const { data: { user } } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // Protected routes - redirect to login if not authenticated
   if (pathname.startsWith("/dashboard") && !user) {

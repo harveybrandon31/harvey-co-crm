@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { mockInvoices, mockClients, mockTaxReturns, DEMO_MODE } from "@/lib/mock-data";
 import type { InvoiceLineItem, InvoiceStatus } from "@/lib/types";
 
 export async function getInvoices(filters?: {
@@ -10,6 +11,38 @@ export async function getInvoices(filters?: {
   clientId?: string;
   search?: string;
 }) {
+  if (DEMO_MODE) {
+    let invoices = mockInvoices.map((inv) => {
+      const client = mockClients.find((c) => c.id === inv.client_id);
+      return {
+        ...inv,
+        clients: {
+          id: client?.id || "",
+          first_name: client?.first_name || "",
+          last_name: client?.last_name || "",
+          email: client?.email || null,
+        },
+      };
+    });
+
+    if (filters?.status) {
+      invoices = invoices.filter((inv) => inv.status === filters.status);
+    }
+
+    if (filters?.clientId) {
+      invoices = invoices.filter((inv) => inv.client_id === filters.clientId);
+    }
+
+    if (filters?.search) {
+      const search = filters.search.toLowerCase();
+      invoices = invoices.filter((inv) =>
+        inv.invoice_number.toLowerCase().includes(search)
+      );
+    }
+
+    return { data: invoices };
+  }
+
   const supabase = await createClient();
 
   const {
@@ -58,6 +91,29 @@ export async function getInvoices(filters?: {
 }
 
 export async function getInvoice(id: string) {
+  if (DEMO_MODE) {
+    const invoice = mockInvoices.find((inv) => inv.id === id);
+    if (!invoice) {
+      return { error: "Invoice not found" };
+    }
+
+    const client = mockClients.find((c) => c.id === invoice.client_id);
+    const { mockTaxReturns } = await import("@/lib/mock-data");
+    const taxReturn = invoice.tax_return_id
+      ? mockTaxReturns.find((r) => r.id === invoice.tax_return_id)
+      : null;
+
+    return {
+      data: {
+        ...invoice,
+        clients: client || null,
+        tax_returns: taxReturn
+          ? { id: taxReturn.id, tax_year: taxReturn.tax_year, return_type: taxReturn.return_type }
+          : null,
+      },
+    };
+  }
+
   const supabase = await createClient();
 
   const {
@@ -311,6 +367,18 @@ export async function deleteInvoice(id: string) {
 }
 
 export async function getClientsForInvoice() {
+  if (DEMO_MODE) {
+    const data = mockClients
+      .sort((a, b) => a.last_name.localeCompare(b.last_name))
+      .map((c) => ({
+        id: c.id,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        email: c.email,
+      }));
+    return { data };
+  }
+
   const supabase = await createClient();
 
   const {
@@ -335,6 +403,19 @@ export async function getClientsForInvoice() {
 }
 
 export async function getClientReturnsForInvoice(clientId: string) {
+  if (DEMO_MODE) {
+    const data = mockTaxReturns
+      .filter((r) => r.client_id === clientId)
+      .sort((a, b) => b.tax_year - a.tax_year)
+      .map((r) => ({
+        id: r.id,
+        tax_year: r.tax_year,
+        return_type: r.return_type,
+        preparation_fee: r.preparation_fee,
+      }));
+    return { data };
+  }
+
   const supabase = await createClient();
 
   const {
