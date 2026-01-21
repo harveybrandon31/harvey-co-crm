@@ -88,7 +88,21 @@ export async function importClients(csvContent: string): Promise<ImportResult> {
 
   for (let i = 0; i < clientsToInsert.length; i += BATCH_SIZE) {
     const batch = clientsToInsert.slice(i, i + BATCH_SIZE).map((client) => ({
-      ...client,
+      first_name: client.first_name,
+      last_name: client.last_name,
+      email: client.email,
+      phone: client.phone,
+      address_street: client.address_street,
+      address_city: client.address_city,
+      address_state: client.address_state,
+      address_zip: client.address_zip,
+      ssn_last_four: client.ssn_last_four,
+      filing_status: client.filing_status,
+      status: client.status,
+      notes: client.notes,
+      has_spouse: client.has_spouse || false,
+      spouse_first_name: client.spouse_first_name || null,
+      spouse_last_name: client.spouse_last_name || null,
       user_id: user.id,
     }));
 
