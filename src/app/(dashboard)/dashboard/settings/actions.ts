@@ -26,7 +26,7 @@ export async function createUser(formData: FormData) {
     }
   );
 
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  const { error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true, // Auto-confirm the email
