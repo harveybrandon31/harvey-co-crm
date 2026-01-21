@@ -41,34 +41,64 @@ export async function importClients(csvContent: string): Promise<ImportResult> {
     };
   }
 
-  // Check for duplicates by email
-  const emailsToCheck = parseResult.data
-    .filter((c) => c.email)
-    .map((c) => c.email as string);
+  // Get all existing clients to check for duplicates
+  const { data: existingClients } = await supabase
+    .from("clients")
+    .select("email, phone, first_name, last_name")
+    .eq("user_id", user.id);
 
-  let existingEmails: string[] = [];
-  if (emailsToCheck.length > 0) {
-    const { data: existingClients } = await supabase
-      .from("clients")
-      .select("email")
-      .eq("user_id", user.id)
-      .in("email", emailsToCheck);
+  // Build sets for duplicate checking
+  const existingEmails = new Set(
+    (existingClients || [])
+      .map((c) => c.email?.toLowerCase())
+      .filter((e): e is string => !!e)
+  );
 
-    existingEmails = (existingClients || [])
-      .map((c) => c.email)
-      .filter((e): e is string => e !== null);
-  }
+  const existingPhones = new Set(
+    (existingClients || [])
+      .map((c) => c.phone?.replace(/\D/g, "")) // Normalize phone to digits only
+      .filter((p): p is string => !!p && p.length >= 10)
+  );
+
+  const existingNames = new Set(
+    (existingClients || [])
+      .map((c) => `${c.first_name?.toLowerCase()?.trim()}|${c.last_name?.toLowerCase()?.trim()}`)
+      .filter((n) => n !== "|")
+  );
 
   // Filter out duplicates
   const duplicates: string[] = [];
   const clientsToInsert: ParsedClient[] = [];
 
   parseResult.data.forEach((client) => {
-    if (client.email && existingEmails.includes(client.email)) {
-      duplicates.push(`${client.first_name} ${client.last_name} (${client.email})`);
-    } else {
-      clientsToInsert.push(client);
+    const clientEmail = client.email?.toLowerCase();
+    const clientPhone = client.phone?.replace(/\D/g, "");
+    const clientNameKey = `${client.first_name.toLowerCase().trim()}|${client.last_name.toLowerCase().trim()}`;
+
+    // Check for duplicate by email
+    if (clientEmail && existingEmails.has(clientEmail)) {
+      duplicates.push(`${client.first_name} ${client.last_name} (email: ${client.email})`);
+      return;
     }
+
+    // Check for duplicate by phone
+    if (clientPhone && clientPhone.length >= 10 && existingPhones.has(clientPhone)) {
+      duplicates.push(`${client.first_name} ${client.last_name} (phone: ${client.phone})`);
+      return;
+    }
+
+    // Check for duplicate by exact name match
+    if (existingNames.has(clientNameKey)) {
+      duplicates.push(`${client.first_name} ${client.last_name} (name already exists)`);
+      return;
+    }
+
+    // Also track this client to prevent duplicates within the CSV itself
+    if (clientEmail) existingEmails.add(clientEmail);
+    if (clientPhone && clientPhone.length >= 10) existingPhones.add(clientPhone);
+    existingNames.add(clientNameKey);
+
+    clientsToInsert.push(client);
   });
 
   if (clientsToInsert.length === 0) {
