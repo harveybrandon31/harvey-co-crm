@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { login } from "../actions";
 
 export default function LoginPage() {
@@ -57,7 +56,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="block w-full px-4 py-2.5 border border-gray-200 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2D4A43]/20 focus:border-[#2D4A43] transition-colors"
+                className="block w-full px-4 py-2.5 border border-gray-200 rounded-lg shadow-sm placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2D4A43]/20 focus:border-[#2D4A43] transition-colors"
                 placeholder="you@example.com"
               />
             </div>
@@ -72,7 +71,7 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="block w-full px-4 py-2.5 border border-gray-200 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2D4A43]/20 focus:border-[#2D4A43] transition-colors"
+                className="block w-full px-4 py-2.5 border border-gray-200 rounded-lg shadow-sm placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2D4A43]/20 focus:border-[#2D4A43] transition-colors"
                 placeholder="Enter your password"
               />
             </div>
@@ -86,12 +85,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="font-medium text-[#2D4A43] hover:text-[#3D5A53] transition-colors">
-              Sign up
-            </Link>
-          </p>
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-500">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createUser } from "./actions";
 
 interface DeadlineReminder {
   clientName: string;
@@ -28,9 +29,36 @@ export default function SettingsPage() {
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [daysThreshold, setDaysThreshold] = useState(30);
 
+  // User management state
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [addingUser, setAddingUser] = useState(false);
+  const [userResult, setUserResult] = useState<{ success?: string; error?: string } | null>(null);
+
   useEffect(() => {
     fetchReminders();
   }, []);
+
+  async function handleAddUser(e: React.FormEvent) {
+    e.preventDefault();
+    setAddingUser(true);
+    setUserResult(null);
+
+    const formData = new FormData();
+    formData.append("email", newUserEmail);
+    formData.append("password", newUserPassword);
+
+    const result = await createUser(formData);
+    setUserResult(result);
+    setAddingUser(false);
+
+    if (result.success) {
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setShowAddUser(false);
+    }
+  }
 
   async function fetchReminders() {
     setLoading(true);
@@ -76,7 +104,101 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+      <h1 className="font-brand-heading text-2xl font-semibold text-gray-900">Settings</h1>
+
+      {/* User Management Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            User Management
+          </h2>
+          {!showAddUser && (
+            <button
+              onClick={() => setShowAddUser(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#2D4A43] px-4 py-2 text-sm font-medium text-white hover:bg-[#3D5A53] transition-all"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add User
+            </button>
+          )}
+        </div>
+
+        {userResult && (
+          <div
+            className={`mb-4 rounded-lg p-3 text-sm ${
+              userResult.success
+                ? "bg-green-50 text-green-700 border border-green-200"
+                : "bg-red-50 text-red-700 border border-red-200"
+            }`}
+          >
+            {userResult.success || userResult.error}
+          </div>
+        )}
+
+        {showAddUser && (
+          <form onSubmit={handleAddUser} className="border rounded-lg p-4 mb-4 bg-gray-50">
+            <h3 className="text-sm font-medium text-gray-900 mb-4">Add New User</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="userEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email address
+                </label>
+                <input
+                  id="userEmail"
+                  type="email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  required
+                  className="block w-full px-4 py-2.5 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2D4A43]/20 focus:border-[#2D4A43]"
+                  placeholder="user@example.com"
+                />
+              </div>
+              <div>
+                <label htmlFor="userPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <input
+                  id="userPassword"
+                  type="password"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="block w-full px-4 py-2.5 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2D4A43]/20 focus:border-[#2D4A43]"
+                  placeholder="Minimum 6 characters"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={addingUser}
+                  className="rounded-lg bg-[#2D4A43] px-4 py-2 text-sm font-medium text-white hover:bg-[#3D5A53] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {addingUser ? "Creating..." : "Create User"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddUser(false);
+                    setNewUserEmail("");
+                    setNewUserPassword("");
+                    setUserResult(null);
+                  }}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        <p className="text-sm text-gray-500">
+          Add users who need access to this CRM. They will be able to log in immediately with the credentials you provide.
+        </p>
+      </div>
 
       {/* Email Reminders Section */}
       <div className="bg-white shadow rounded-lg p-6">
