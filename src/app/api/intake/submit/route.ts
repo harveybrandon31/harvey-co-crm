@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         console.error("Error updating client:", updateError);
         return NextResponse.json(
-          { error: "Failed to update client record" },
+          { error: `Failed to update client record: ${updateError.message}` },
           { status: 500 }
         );
       }
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
       if (createError || !newClient) {
         console.error("Error creating client:", createError);
         return NextResponse.json(
-          { error: "Failed to create client record" },
+          { error: `Failed to create client record: ${createError?.message || 'Unknown error'}` },
           { status: 500 }
         );
       }
@@ -385,8 +385,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error processing intake submission:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "An unexpected error occurred" },
+      { error: `An unexpected error occurred: ${errorMessage}` },
       { status: 500 }
     );
   }
