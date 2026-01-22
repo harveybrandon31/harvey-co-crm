@@ -93,6 +93,10 @@ export async function POST(
   const firstName = client.first_name || "Valued Client";
   const emailContent = generateCampaignEmail(campaignType, firstName, intakeUrl);
 
+  // Debug: log API key info
+  const apiKeyPrefix = process.env.RESEND_API_KEY?.substring(0, 12) || "NOT SET";
+  console.log("API Key prefix:", apiKeyPrefix);
+
   const result = await sendEmail({
     to: client.email,
     subject: emailContent.subject,
@@ -102,7 +106,14 @@ export async function POST(
 
   if (!result.success) {
     return NextResponse.json(
-      { error: result.error || "Failed to send email" },
+      {
+        error: result.error || "Failed to send email",
+        debug: {
+          apiKeyPrefix,
+          emailFrom: process.env.EMAIL_FROM || "not set",
+          to: client.email,
+        }
+      },
       { status: 500 }
     );
   }

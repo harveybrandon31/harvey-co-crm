@@ -59,7 +59,9 @@ export default function SendEmailButton({
           setResult(null);
         }, 2000);
       } else {
-        setResult({ success: false, message: data.error || "Failed to send email" });
+        // Show full error with debug info
+        const debugInfo = data.debug ? ` | Key: ${data.debug.apiKeyPrefix} | From: ${data.debug.emailFrom}` : "";
+        setResult({ success: false, message: `${data.error || "Failed to send email"}${debugInfo}` });
       }
     } catch (err) {
       setResult({ success: false, message: "Failed to send email" });
