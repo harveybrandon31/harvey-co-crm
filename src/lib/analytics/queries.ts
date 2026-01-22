@@ -487,3 +487,74 @@ function formatTimeAgo(dateString: string): string {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
   return `${Math.floor(diffDays / 30)} months ago`;
 }
+
+export interface PendingIntakeReview {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  filingStatus: string | null;
+  intakeCompletedAt: string;
+  hasDependents: boolean;
+  dependentCount: number;
+}
+
+export async function getPendingIntakeReviews(): Promise<PendingIntakeReview[]> {
+  if (DEMO_MODE) {
+    return [];
+  }
+
+  const supabase = await createClient();
+
+  // Get clients who have completed intake but are still in new_intake pipeline status
+  const { data: clients, error } = await supabase
+    .from("clients")
+    .select(`
+      id,
+      first_name,
+      last_name,
+      email,
+      phone,
+      filing_status,
+      intake_completed_at,
+      has_spouse
+    `)
+    .eq("intake_completed", true)
+    .eq("pipeline_status", "new_intake")
+    .order("intake_completed_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching pending intake reviews:", error);
+    return [];
+  }
+
+  // Get dependent counts for each client
+  const clientIds = (clients || []).map(c => c.id);
+
+  const dependentCounts: Record<string, number> = {};
+  if (clientIds.length > 0) {
+    const { data: dependents } = await supabase
+      .from("dependents")
+      .select("client_id")
+      .in("client_id", clientIds);
+
+    if (dependents) {
+      dependents.forEach(d => {
+        dependentCounts[d.client_id] = (dependentCounts[d.client_id] || 0) + 1;
+      });
+    }
+  }
+
+  return (clients || []).map(c => ({
+    id: c.id,
+    firstName: c.first_name,
+    lastName: c.last_name,
+    email: c.email,
+    phone: c.phone,
+    filingStatus: c.filing_status,
+    intakeCompletedAt: c.intake_completed_at,
+    hasDependents: (dependentCounts[c.id] || 0) > 0,
+    dependentCount: dependentCounts[c.id] || 0,
+  }));
+}

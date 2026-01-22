@@ -299,8 +299,13 @@ export async function POST(request: NextRequest) {
     };
     if (userId) {
       taskData.assigned_to = userId;
+      taskData.created_by = userId;
     }
-    await supabase.from("tasks").insert(taskData);
+    const { error: taskError } = await supabase.from("tasks").insert(taskData);
+    if (taskError) {
+      console.error("Error creating review task:", taskError);
+      console.error("Task data attempted:", JSON.stringify(taskData));
+    }
 
     // Log the activity
     const activityData: Record<string, unknown> = {

@@ -8,6 +8,19 @@ import DocumentChecklist from "@/components/clients/DocumentChecklist";
 import DeleteClientButton from "@/components/clients/DeleteClientButton";
 import SendEmailButton from "@/components/clients/SendEmailButton";
 
+interface IntakeResponse {
+  question_key: string;
+  response_value: boolean | number | string | string[];
+}
+
+// Helper function to extract intake answers
+function getIntakeAnswer<T>(responses: IntakeResponse[] | null, key: string, defaultValue: T): T {
+  if (!responses) return defaultValue;
+  const response = responses.find(r => r.question_key === key);
+  if (!response) return defaultValue;
+  return response.response_value as T;
+}
+
 // Extended client type for intake data
 interface ClientWithIntake extends Client {
   date_of_birth?: string | null;
@@ -32,6 +45,7 @@ export default async function ClientDetailPage({
   let tasks: Task[] | null = null;
   let documents: Document[] | null = null;
   let intakeLinks: IntakeLink[] | null = null;
+  let intakeResponses: IntakeResponse[] | null = null;
 
   if (DEMO_MODE) {
     client = mockClients.find((c) => c.id === id) || null;
@@ -122,6 +136,14 @@ export default async function ClientDetailPage({
       .order("created_at", { ascending: false });
 
     intakeLinks = linksData;
+
+    // Fetch intake responses
+    const { data: responsesData } = await supabase
+      .from("intake_responses")
+      .select("question_key, response_value")
+      .eq("client_id", id);
+
+    intakeResponses = responsesData;
   }
 
   if (!client) {
@@ -376,22 +398,27 @@ export default async function ClientDetailPage({
             intakeLinks={intakeLinks || []}
           />
 
-          {/* Document Checklist */}
+          {/* Document Checklist - populated from intake responses */}
           <DocumentChecklist
             clientId={id}
             clientName={`${client.first_name} ${client.last_name}`}
-            hasW2Income={client.status === "active"}
-            w2Count={1}
-            has1099Income={client.notes?.includes("1099") || client.notes?.includes("freelance")}
+            clientEmail={client.email}
+            hasW2Income={getIntakeAnswer(intakeResponses, "has_w2_income", client.status === "active")}
+            w2Count={getIntakeAnswer(intakeResponses, "w2_employer_count", 1)}
+            has1099Income={getIntakeAnswer(intakeResponses, "has_1099_income", false)}
             hasSpouse={client.has_spouse}
             hasDependents={(dependents && dependents.length > 0) || false}
             dependentCount={dependents?.length || 0}
-            hasMortgage={false}
-            hasStudentLoans={false}
-            hasCrypto={client.notes?.toLowerCase().includes("crypto")}
-            hasStockSales={client.notes?.toLowerCase().includes("stock")}
-            hasRentalIncome={false}
-            hasForeignIncome={false}
+            hasMortgage={getIntakeAnswer(intakeResponses, "has_mortgage_interest", false)}
+            hasStudentLoans={getIntakeAnswer(intakeResponses, "has_student_loan", false)}
+            hasCrypto={getIntakeAnswer(intakeResponses, "has_crypto", false)}
+            hasStockSales={getIntakeAnswer(intakeResponses, "has_stock_sales", false)}
+            hasRentalIncome={getIntakeAnswer(intakeResponses, "has_rental_income", false)}
+            hasForeignIncome={getIntakeAnswer(intakeResponses, "has_foreign_income", false)}
+            hasCharitable={getIntakeAnswer(intakeResponses, "has_charitable", false)}
+            hasChildcare={getIntakeAnswer(intakeResponses, "has_childcare", false)}
+            hasEducation={getIntakeAnswer(intakeResponses, "has_education", false)}
+            hasBusinessExpenses={getIntakeAnswer(intakeResponses, "has_business", false)}
           />
         </div>
 

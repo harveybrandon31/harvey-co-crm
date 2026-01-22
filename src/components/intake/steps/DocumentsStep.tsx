@@ -13,7 +13,6 @@ const DOCUMENT_CATEGORIES = [
   { id: "1099", label: "1099 Forms", description: "Income from other sources" },
   { id: "1098", label: "1098 Forms", description: "Mortgage interest, tuition statements" },
   { id: "prior_return", label: "Prior Year Return", description: "Last year's tax return" },
-  { id: "id", label: "Photo ID", description: "Driver's license or state ID" },
   { id: "other", label: "Other Documents", description: "Any other relevant documents" },
 ];
 
@@ -63,6 +62,8 @@ export default function DocumentsStep({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const driversLicenseDocs = getDocsByCategory("drivers_license");
+
   return (
     <div className="space-y-6">
       <div>
@@ -72,16 +73,81 @@ export default function DocumentsStep({
         </p>
       </div>
 
-      <div className="bg-[#2D4A43]/5 border border-[#2D4A43]/10 rounded-xl p-5">
+      {/* Driver's License Upload - Prominent Optional Section */}
+      <div className="bg-gradient-to-r from-[#2D4A43] to-[#3D5A53] rounded-xl p-6 text-white">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-white/10 rounded-lg">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold">Driver&apos;s License</h3>
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Optional</span>
+            </div>
+            <p className="text-sm text-white/80 mb-4">
+              Upload a photo of your driver&apos;s license to help us verify your identity quickly.
+              This speeds up the tax preparation process.
+            </p>
+
+            {driversLicenseDocs.length > 0 ? (
+              <div className="space-y-2">
+                {driversLicenseDocs.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between bg-white/10 px-3 py-2 rounded-lg"
+                  >
+                    <div className="flex items-center min-w-0">
+                      <svg className="h-5 w-5 text-white/60 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm truncate">{doc.name}</span>
+                      {doc.file && (
+                        <span className="ml-2 text-xs text-white/60">
+                          ({formatFileSize(doc.file.size)})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(doc.id)}
+                      className="ml-2 text-white/60 hover:text-white p-1"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-white text-[#2D4A43] text-sm font-medium rounded-lg hover:bg-white/90 transition-all">
+                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Upload Photo
+                <input
+                  type="file"
+                  className="sr-only"
+                  accept=".pdf,.jpg,.jpeg,.png,.heic"
+                  onChange={(e) => handleFileSelect(e, "drivers_license")}
+                />
+              </label>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-[#F5F3EF] border border-[#2D4A43]/10 rounded-xl p-5">
         <h4 className="text-sm font-medium text-[#2D4A43] mb-3">
-          Documents to gather:
+          Other documents to gather:
         </h4>
         <ul className="text-sm text-gray-600 list-disc list-inside space-y-1.5">
           <li>W-2s from all employers</li>
           <li>1099s (interest, dividends, contractor income)</li>
           <li>1098s (mortgage interest, student loan interest, tuition)</li>
           <li>Last year&apos;s tax return (helpful for comparison)</li>
-          <li>Photo ID (driver&apos;s license or state ID)</li>
         </ul>
       </div>
 

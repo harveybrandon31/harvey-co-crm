@@ -15,6 +15,7 @@ interface DocumentItem {
 interface DocumentChecklistProps {
   clientId: string;
   clientName: string;
+  clientEmail?: string | null;
   hasW2Income?: boolean;
   w2Count?: number;
   has1099Income?: boolean;
@@ -27,11 +28,17 @@ interface DocumentChecklistProps {
   hasStockSales?: boolean;
   hasRentalIncome?: boolean;
   hasForeignIncome?: boolean;
+  hasCharitable?: boolean;
+  hasChildcare?: boolean;
+  hasEducation?: boolean;
+  hasBusinessExpenses?: boolean;
   onDocumentToggle?: (docId: string, received: boolean) => void;
 }
 
 export default function DocumentChecklist({
+  clientId,
   clientName,
+  clientEmail,
   hasW2Income = false,
   w2Count = 1,
   has1099Income = false,
@@ -44,8 +51,13 @@ export default function DocumentChecklist({
   hasStockSales = false,
   hasRentalIncome = false,
   hasForeignIncome = false,
+  hasCharitable = false,
+  hasChildcare = false,
+  hasEducation = false,
+  hasBusinessExpenses = false,
   onDocumentToggle,
 }: DocumentChecklistProps) {
+  const [sendingReminder, setSendingReminder] = useState(false);
   // Generate document checklist based on client profile
   const generateChecklist = (): DocumentItem[] => {
     const items: DocumentItem[] = [];
@@ -239,6 +251,78 @@ export default function DocumentChecklist({
       });
     }
 
+    // Charitable donations
+    if (hasCharitable) {
+      items.push({
+        id: "charitable-receipts",
+        name: "Charitable Donation Receipts",
+        description: "Receipts and acknowledgment letters from charities",
+        required: true,
+        received: false,
+        category: "Deductions",
+      });
+    }
+
+    // Childcare
+    if (hasChildcare) {
+      items.push({
+        id: "childcare-receipts",
+        name: "Childcare Expense Records",
+        description: "Provider receipts with name, address, and tax ID",
+        required: true,
+        received: false,
+        category: "Deductions",
+      });
+    }
+
+    // Education
+    if (hasEducation) {
+      items.push({
+        id: "1098-t",
+        name: "1098-T Tuition Statement",
+        description: "Tuition statement from educational institution",
+        required: true,
+        received: false,
+        category: "Deductions",
+      });
+      items.push({
+        id: "education-receipts",
+        name: "Education Expense Receipts",
+        description: "Books, supplies, and required materials",
+        required: false,
+        received: false,
+        category: "Deductions",
+      });
+    }
+
+    // Business expenses
+    if (hasBusinessExpenses) {
+      items.push({
+        id: "business-receipts",
+        name: "Business Expense Records",
+        description: "Receipts for business-related expenses",
+        required: true,
+        received: false,
+        category: "Business",
+      });
+      items.push({
+        id: "mileage-log",
+        name: "Vehicle Mileage Log",
+        description: "Log of business miles driven",
+        required: false,
+        received: false,
+        category: "Business",
+      });
+      items.push({
+        id: "home-office",
+        name: "Home Office Documentation",
+        description: "Square footage, utility bills if claiming home office",
+        required: false,
+        received: false,
+        category: "Business",
+      });
+    }
+
     // Dependents
     if (hasDependents && dependentCount > 0) {
       items.push({
@@ -280,6 +364,39 @@ export default function DocumentChecklist({
   const requiredReceivedCount = documents.filter((d) => d.required && d.received).length;
   const totalReceivedCount = documents.filter((d) => d.received).length;
   const progress = requiredCount > 0 ? (requiredReceivedCount / requiredCount) * 100 : 0;
+  const missingRequired = documents.filter((d) => d.required && !d.received);
+
+  const handleSendReminder = async () => {
+    if (!clientEmail || missingRequired.length === 0) return;
+
+    setSendingReminder(true);
+    try {
+      const response = await fetch("/api/documents/reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId,
+          clientName,
+          clientEmail,
+          missingDocuments: missingRequired.map(d => ({
+            name: d.name,
+            description: d.description,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send reminder");
+      }
+
+      alert("Reminder email sent successfully!");
+    } catch (error) {
+      console.error("Error sending reminder:", error);
+      alert("Failed to send reminder email. Please try again.");
+    } finally {
+      setSendingReminder(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -413,9 +530,33 @@ export default function DocumentChecklist({
           <p className="text-sm text-gray-500">
             Click items to mark as received
           </p>
-          <button className="text-sm font-medium text-[#2D4A43] hover:text-[#3D5A53] transition-colors">
-            Send Reminder Email
-          </button>
+          {clientEmail && missingRequired.length > 0 && (
+            <button
+              onClick={handleSendReminder}
+              disabled={sendingReminder}
+              className="text-sm font-medium text-[#2D4A43] hover:text-[#3D5A53] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+            >
+              {sendingReminder ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Send Reminder Email
+                </>
+              )}
+            </button>
+          )}
+          {!clientEmail && (
+            <span className="text-xs text-gray-400">No email address</span>
+          )}
         </div>
       </div>
     </div>

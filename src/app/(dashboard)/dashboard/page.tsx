@@ -5,6 +5,7 @@ import {
   getRecentActivity,
   getUpcomingDeadlines,
   getClientOverview,
+  getPendingIntakeReviews,
 } from "@/lib/analytics/queries";
 import StatsCards from "@/components/analytics/StatsCards";
 import StatusPieChart from "@/components/analytics/StatusPieChart";
@@ -12,13 +13,14 @@ import MonthlyFilingsChart from "@/components/analytics/MonthlyFilingsChart";
 import RecentActivityFeed from "@/components/analytics/RecentActivityFeed";
 import UpcomingDeadlines from "@/components/analytics/UpcomingDeadlines";
 import ClientOverview from "@/components/analytics/ClientOverview";
+import PendingIntakeReviews from "@/components/analytics/PendingIntakeReviews";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const currentYear = new Date().getFullYear();
 
-  const [stats, statusBreakdown, monthlyData, recentActivity, upcomingDeadlines, clientOverview] =
+  const [stats, statusBreakdown, monthlyData, recentActivity, upcomingDeadlines, clientOverview, pendingIntakes] =
     await Promise.all([
       getDashboardStats(),
       getReturnStatusBreakdown(),
@@ -26,6 +28,7 @@ export default async function DashboardPage() {
       getRecentActivity(8),
       getUpcomingDeadlines(30),
       getClientOverview(),
+      getPendingIntakeReviews(),
     ]);
 
   return (
@@ -54,6 +57,28 @@ export default async function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Pending Intake Reviews - Priority Alert */}
+      {pendingIntakes.length > 0 && (
+        <div className="bg-white rounded-xl border-2 border-amber-300 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <h2 className="font-brand-heading text-lg font-semibold text-gray-900">
+                Completed Intakes Pending Review
+              </h2>
+            </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+              {pendingIntakes.length} pending
+            </span>
+          </div>
+          <PendingIntakeReviews reviews={pendingIntakes} />
+        </div>
+      )}
 
       {/* Stats Cards */}
       <StatsCards stats={stats} />
