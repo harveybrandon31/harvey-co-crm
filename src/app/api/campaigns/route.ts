@@ -83,6 +83,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Debug: log API key info
+    const apiKey = process.env.RESEND_API_KEY;
+    const apiKeyPrefix = apiKey ? apiKey.substring(0, 12) : "NOT SET";
+    const emailFrom = process.env.EMAIL_FROM || "not set";
+    console.log("Test email - API Key prefix:", apiKeyPrefix, "EMAIL_FROM:", emailFrom);
+
     const emailContent = generateCampaignEmail(campaignType, "Test User", intakeUrl);
     const result = await sendEmail({
       to: testEmail,
@@ -93,7 +99,11 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error, sent: false },
+        {
+          error: result.error,
+          sent: false,
+          debug: { apiKeyPrefix, emailFrom, to: testEmail }
+        },
         { status: 500 }
       );
     }

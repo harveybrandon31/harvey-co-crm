@@ -46,6 +46,11 @@ interface CampaignResult {
   message?: string;
   error?: string;
   campaignType?: string;
+  debug?: {
+    apiKeyPrefix?: string;
+    emailFrom?: string;
+    to?: string;
+  };
 }
 
 export default function SettingsPage() {
@@ -387,7 +392,14 @@ export default function SettingsPage() {
                 </div>
               )
             ) : (
-              <p>Error: {campaignResult.error}</p>
+              <div>
+                <p>Error: {campaignResult.error}</p>
+                {campaignResult.debug && (
+                  <p className="mt-1 text-xs">
+                    Key: {campaignResult.debug.apiKeyPrefix} | From: {campaignResult.debug.emailFrom} | To: {campaignResult.debug.to}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}
