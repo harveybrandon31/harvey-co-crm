@@ -14,8 +14,20 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Harvey & Co Financial Services - CRM",
-  description: "Client management system for Harvey & Co Financial Services",
+  title: "Harvey & Co Financial Services",
+  description: "Tax preparation with a personal touch. Maximize your refund with expert tax services.",
+  openGraph: {
+    title: "Harvey & Co Financial Services",
+    description: "Tax preparation with a personal touch. Maximize your refund with expert tax services.",
+    siteName: "Harvey & Co",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Harvey & Co Financial Services",
+    description: "Tax preparation with a personal touch. Maximize your refund with expert tax services.",
+  },
 };
 
 export default function RootLayout({
