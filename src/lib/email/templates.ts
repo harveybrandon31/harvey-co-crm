@@ -402,6 +402,10 @@ View Return: ${baseUrl}/dashboard/returns/${reminder.returnId}
 // Email signature for campaign emails
 const BRANDON_PHOTO_URL = "https://www.dropbox.com/scl/fi/ijjswkfn81jd90cxpxsef/brandon-new-photo-2.png?rlkey=lb3xnmidlbiyclr0ujtsabol2&raw=1";
 
+// Office phone number (Twilio) - set via environment variable
+const OFFICE_PHONE = process.env.OFFICE_PHONE_NUMBER || "(XXX) XXX-XXXX";
+const CELL_PHONE = "(717) 319-2858";
+
 function getEmailSignature(): string {
   return `
     <table style="border-top: 2px solid ${BRAND_ACCENT}; padding-top: 20px; margin-top: 32px; width: 100%;">
@@ -420,7 +424,10 @@ function getEmailSignature(): string {
             <a href="mailto:team@harveynco.com" style="color: ${BRAND_PRIMARY}; text-decoration: none;">team@harveynco.com</a>
           </p>
           <p style="margin: 0 0 3px 0; font-size: 13px; color: #4B5563;">
-            <a href="tel:+17173192858" style="color: ${BRAND_PRIMARY}; text-decoration: none;">(717) 319-2858</a>
+            <strong>Office:</strong> <a href="tel:${OFFICE_PHONE.replace(/[^0-9+]/g, '')}" style="color: ${BRAND_PRIMARY}; text-decoration: none;">${OFFICE_PHONE}</a>
+          </p>
+          <p style="margin: 0 0 3px 0; font-size: 13px; color: #4B5563;">
+            <strong>Cell:</strong> <a href="tel:+17173192858" style="color: ${BRAND_PRIMARY}; text-decoration: none;">${CELL_PHONE}</a>
           </p>
           <p style="margin: 0; font-size: 12px; color: #6B7280;">
             4331 N 12th St. Suite 103, Phoenix, AZ 85014
@@ -437,7 +444,8 @@ function getEmailSignatureText(): string {
 Brandon Harvey
 Harvey & Co Financial Services
 team@harveynco.com
-(717) 319-2858
+Office: ${OFFICE_PHONE}
+Cell: ${CELL_PHONE}
 4331 N 12th St. Suite 103, Phoenix, AZ 85014
   `.trim();
 }

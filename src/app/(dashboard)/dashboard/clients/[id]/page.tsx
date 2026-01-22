@@ -7,6 +7,7 @@ import ClientIntakeLinkSection from "@/components/intake/ClientIntakeLinkSection
 import DocumentChecklist from "@/components/clients/DocumentChecklist";
 import DeleteClientButton from "@/components/clients/DeleteClientButton";
 import SendEmailButton from "@/components/clients/SendEmailButton";
+import SendSMSButton from "@/components/clients/SendSMSButton";
 
 interface IntakeResponse {
   question_key: string;
@@ -188,11 +189,18 @@ export default async function ClientDetailPage({
         </div>
         <div className="flex gap-3">
           {!DEMO_MODE && (
-            <SendEmailButton
-              clientId={id}
-              clientName={`${(client as Client).first_name} ${(client as Client).last_name}`}
-              clientEmail={(client as Client).email}
-            />
+            <>
+              <SendSMSButton
+                clientId={id}
+                clientName={`${(client as Client).first_name} ${(client as Client).last_name}`}
+                clientPhone={(client as Client).phone}
+              />
+              <SendEmailButton
+                clientId={id}
+                clientName={`${(client as Client).first_name} ${(client as Client).last_name}`}
+                clientEmail={(client as Client).email}
+              />
+            </>
           )}
           <Link
             href={`/dashboard/clients/${id}/edit`}
