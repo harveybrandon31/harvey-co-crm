@@ -137,13 +137,12 @@ export async function POST(request: NextRequest) {
     let failed = 0;
     const errors: { email: string; error: string }[] = [];
 
-    // Process in batches
-    const batchSize = 10;
-    for (let i = 0; i < clientsToEnroll.length; i += batchSize) {
-      const batch = clientsToEnroll.slice(i, i + batchSize);
+    // Process one at a time to respect Resend's 2/second rate limit
+    for (const client of clientsToEnroll) {
+      // Add delay between emails (600ms = ~1.6 emails/second, safely under 2/second limit)
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
-      const results = await Promise.all(
-        batch.map(async (client: Client) => {
+      const result = await (async (client: Client) => {
           if (!client.email) return { success: false, error: "No email" };
 
           try {
@@ -214,23 +213,15 @@ export async function POST(request: NextRequest) {
               error: err instanceof Error ? err.message : "Unknown error",
             };
           }
-        })
-      );
+      })(client);
 
-      for (const result of results) {
-        if (result.success) {
-          enrolled++;
-        } else {
-          failed++;
-          if (result.error && result.email) {
-            errors.push({ email: result.email, error: result.error });
-          }
+      if (result.success) {
+        enrolled++;
+      } else {
+        failed++;
+        if (result.error && result.email) {
+          errors.push({ email: result.email, error: result.error });
         }
-      }
-
-      // Small delay between batches
-      if (i + batchSize < clientsToEnroll.length) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
 
