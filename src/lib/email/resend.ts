@@ -15,8 +15,13 @@ export async function sendEmail(options: EmailOptions) {
     return { success: false, error: "Email service not configured" };
   }
 
+  // Debug: log key prefix to verify correct key is loaded
+  console.log("Using Resend API key starting with:", apiKey.substring(0, 10) + "...");
+
   const resend = new Resend(apiKey);
   const from = process.env.EMAIL_FROM || "Harvey & Co <onboarding@resend.dev>";
+
+  console.log("Sending email from:", from, "to:", options.to);
 
   try {
     const { data, error } = await resend.emails.send({
@@ -28,7 +33,7 @@ export async function sendEmail(options: EmailOptions) {
     });
 
     if (error) {
-      console.error("Email send error:", error);
+      console.error("Email send error:", JSON.stringify(error, null, 2));
       return { success: false, error: error.message };
     }
 
