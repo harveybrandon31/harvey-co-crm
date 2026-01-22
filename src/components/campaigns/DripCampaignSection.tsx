@@ -22,6 +22,7 @@ interface CampaignResult {
   enrolled?: number;
   failed?: number;
   total?: number;
+  remaining?: number;
   message?: string;
   error?: string;
   errors?: { email: string; error: string }[];
@@ -253,6 +254,11 @@ export default function DripCampaignSection() {
               <p className="mt-1">
                 Enrolled: {result.enrolled} | Failed: {result.failed}
               </p>
+              {result.remaining && result.remaining > 0 && (
+                <p className="mt-2 font-medium text-orange-700">
+                  {result.remaining} clients remaining - click Start Campaign again to continue
+                </p>
+              )}
               {result.errors && result.errors.length > 0 && (
                 <div className="mt-3 text-xs">
                   <p className="font-medium mb-1">First {result.errors.length} errors:</p>

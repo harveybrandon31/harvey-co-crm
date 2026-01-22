@@ -133,12 +133,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Limit batch size to avoid Vercel timeout (50 emails * 600ms = 30 seconds)
+    const maxPerRequest = 50;
+    const clientsThisBatch = clientsToEnroll.slice(0, maxPerRequest);
+    const remaining = clientsToEnroll.length - clientsThisBatch.length;
+
     let enrolled = 0;
     let failed = 0;
     const errors: { email: string; error: string }[] = [];
 
     // Process one at a time to respect Resend's 2/second rate limit
-    for (const client of clientsToEnroll) {
+    for (const client of clientsThisBatch) {
       // Add delay between emails (600ms = ~1.6 emails/second, safely under 2/second limit)
       await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -229,7 +234,9 @@ export async function POST(request: NextRequest) {
       success: true,
       enrolled,
       failed,
-      total: clientsToEnroll.length,
+      total: clientsThisBatch.length,
+      remaining,
+      message: remaining > 0 ? `${remaining} clients remaining - click Start Campaign again to continue` : undefined,
       errors: errors.slice(0, 10),
     });
   }
