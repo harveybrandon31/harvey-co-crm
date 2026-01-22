@@ -10,6 +10,11 @@ interface SendEmailButtonProps {
 
 const EMAIL_TEMPLATES = [
   {
+    type: "intake_link",
+    name: "Intake Form Link",
+    description: "Simple email with link to complete their intake form",
+  },
+  {
     type: "intro",
     name: "Introduction Email",
     description: "Your story and background in financial services",
@@ -32,7 +37,7 @@ export default function SendEmailButton({
   clientEmail,
 }: SendEmailButtonProps) {
   const [showModal, setShowModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState("intro");
+  const [selectedTemplate, setSelectedTemplate] = useState("intake_link");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 

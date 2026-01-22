@@ -451,7 +451,7 @@ Cell: ${CELL_PHONE}
 }
 
 // Campaign Email Types
-export type CampaignType = "intro" | "refund_amounts" | "urgency";
+export type CampaignType = "intro" | "refund_amounts" | "urgency" | "intake_link";
 
 export interface CampaignEmailConfig {
   type: CampaignType;
@@ -461,6 +461,12 @@ export interface CampaignEmailConfig {
 }
 
 export const CAMPAIGN_TYPES: CampaignEmailConfig[] = [
+  {
+    type: "intake_link",
+    name: "Intake Form Link",
+    description: "Simple email with link to complete their tax intake form",
+    subject: "Complete Your Tax Information - Harvey & Co",
+  },
   {
     type: "intro",
     name: "Introduction Email",
@@ -811,6 +817,81 @@ ${getEmailSignatureText()}
   return { subject, html, text };
 }
 
+// Simple Intake Link Email - Just sends the form link
+export function generateIntakeLinkEmail(
+  clientFirstName: string,
+  intakeUrl: string
+): { subject: string; html: string; text: string } {
+  const subject = "Complete Your Tax Information - Harvey & Co";
+
+  const content = `
+    <h2 style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-size: 24px; font-weight: 500; color: #1A1A1A;">
+      Hi ${clientFirstName},
+    </h2>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      Please complete your tax intake form using the secure link below. This will help us gather
+      the information we need to prepare your tax return.
+    </p>
+
+    <p style="margin: 0 0 24px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      The form takes about <strong>5-10 minutes</strong> to complete and covers your personal
+      information, income sources, and potential deductions.
+    </p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${intakeUrl}"
+         style="display: inline-block; background: ${BRAND_PRIMARY}; color: white; padding: 18px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(45, 74, 67, 0.3);">
+        Complete Intake Form &rarr;
+      </a>
+    </div>
+
+    <div style="background: ${BRAND_BACKGROUND}; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: ${BRAND_PRIMARY}; text-transform: uppercase; letter-spacing: 1px;">
+        What You'll Need
+      </h3>
+      <ul style="margin: 0; padding-left: 20px; color: #4B5563; line-height: 1.8;">
+        <li>Social Security Numbers (you and dependents)</li>
+        <li>Date of birth for you and family members</li>
+        <li>General idea of your income sources</li>
+        <li>Basic information about deductions</li>
+      </ul>
+    </div>
+
+    <p style="margin: 24px 0 0 0; font-size: 14px; color: #6B7280;">
+      This link is personalized for you and will expire in 30 days. If you have any questions,
+      just reply to this email or give me a call.
+    </p>
+
+    ${getEmailSignature()}
+  `;
+
+  const html = wrapEmailTemplate(content, `${clientFirstName}, please complete your tax intake form`);
+
+  const text = `
+Hi ${clientFirstName},
+
+Please complete your tax intake form using the secure link below. This will help us gather the information we need to prepare your tax return.
+
+The form takes about 5-10 minutes to complete and covers your personal information, income sources, and potential deductions.
+
+COMPLETE YOUR INTAKE FORM:
+${intakeUrl}
+
+WHAT YOU'LL NEED:
+- Social Security Numbers (you and dependents)
+- Date of birth for you and family members
+- General idea of your income sources
+- Basic information about deductions
+
+This link is personalized for you and will expire in 30 days. If you have any questions, just reply to this email or give me a call.
+
+${getEmailSignatureText()}
+  `.trim();
+
+  return { subject, html, text };
+}
+
 // Helper function to generate campaign email by type
 export function generateCampaignEmail(
   type: CampaignType,
@@ -818,6 +899,8 @@ export function generateCampaignEmail(
   intakeUrl: string
 ): { subject: string; html: string; text: string } {
   switch (type) {
+    case "intake_link":
+      return generateIntakeLinkEmail(clientFirstName, intakeUrl);
     case "intro":
       return generateIntroEmail(clientFirstName, intakeUrl);
     case "refund_amounts":
