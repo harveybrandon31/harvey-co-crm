@@ -24,6 +24,7 @@ interface CampaignResult {
   total?: number;
   message?: string;
   error?: string;
+  errors?: { email: string; error: string }[];
 }
 
 export default function DripCampaignSection() {
@@ -252,6 +253,18 @@ export default function DripCampaignSection() {
               <p className="mt-1">
                 Enrolled: {result.enrolled} | Failed: {result.failed}
               </p>
+              {result.errors && result.errors.length > 0 && (
+                <div className="mt-3 text-xs">
+                  <p className="font-medium mb-1">First {result.errors.length} errors:</p>
+                  <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    {result.errors.map((err, i) => (
+                      <li key={i} className="bg-red-100 px-2 py-1 rounded">
+                        {err.email}: {err.error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           ) : (
             <p>Error: {result.error}</p>
