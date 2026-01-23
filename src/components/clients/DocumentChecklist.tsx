@@ -58,6 +58,11 @@ export default function DocumentChecklist({
   onDocumentToggle,
 }: DocumentChecklistProps) {
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedForRequest, setSelectedForRequest] = useState<Set<string>>(new Set());
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [sendingRequest, setSendingRequest] = useState(false);
+  const [requestResult, setRequestResult] = useState<{ success: boolean; message: string } | null>(null);
   // Generate document checklist based on client profile
   const generateChecklist = (): DocumentItem[] => {
     const items: DocumentItem[] = [];
@@ -398,6 +403,78 @@ export default function DocumentChecklist({
     }
   };
 
+  const toggleSelectForRequest = (docId: string) => {
+    setSelectedForRequest((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllMissing = () => {
+    const missingIds = documents.filter((d) => !d.received).map((d) => d.id);
+    setSelectedForRequest(new Set(missingIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedForRequest(new Set());
+  };
+
+  const handleSendDocumentRequest = async () => {
+    if (!clientEmail || selectedForRequest.size === 0) return;
+
+    setSendingRequest(true);
+    setRequestResult(null);
+
+    try {
+      const selectedDocs = documents.filter((d) => selectedForRequest.has(d.id));
+
+      const response = await fetch(`/api/clients/${clientId}/send-document-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documents: selectedDocs.map((d) => ({
+            name: d.name,
+            description: d.description,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setRequestResult({
+          success: true,
+          message: `Document request sent for ${selectedDocs.length} item${selectedDocs.length > 1 ? "s" : ""}!`,
+        });
+        // Close modal after success
+        setTimeout(() => {
+          setShowRequestModal(false);
+          setSelectMode(false);
+          setSelectedForRequest(new Set());
+          setRequestResult(null);
+        }, 2000);
+      } else {
+        setRequestResult({
+          success: false,
+          message: data.error || "Failed to send document request",
+        });
+      }
+    } catch (error) {
+      console.error("Error sending document request:", error);
+      setRequestResult({
+        success: false,
+        message: "Failed to send document request. Please try again.",
+      });
+    } finally {
+      setSendingRequest(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Header */}
@@ -411,11 +488,48 @@ export default function DocumentChecklist({
               {clientName}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-semibold text-[#2D4A43]">
-              {requiredReceivedCount}/{requiredCount}
-            </p>
-            <p className="text-xs text-gray-500">required received</p>
+          <div className="flex items-center gap-4">
+            {/* Select Mode Toggle */}
+            {clientEmail && (
+              <div className="flex items-center gap-2">
+                {selectMode ? (
+                  <>
+                    <button
+                      onClick={selectAllMissing}
+                      className="text-xs text-[#2D4A43] hover:underline"
+                    >
+                      Select All Missing
+                    </button>
+                    <span className="text-gray-300">|</span>
+                    <button
+                      onClick={() => {
+                        setSelectMode(false);
+                        clearSelection();
+                      }}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setSelectMode(true)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-[#2D4A43] hover:text-[#3D5A53] transition-colors"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Request Documents
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="text-right">
+              <p className="text-2xl font-semibold text-[#2D4A43]">
+                {requiredReceivedCount}/{requiredCount}
+              </p>
+              <p className="text-xs text-gray-500">required received</p>
+            </div>
           </div>
         </div>
 
@@ -452,72 +566,114 @@ export default function DocumentChecklist({
               </div>
 
               <div className="space-y-2">
-                {categoryDocs.map((doc) => (
-                  <button
-                    key={doc.id}
-                    onClick={() => toggleDocument(doc.id)}
-                    className={`w-full text-left flex items-start gap-3 p-3 rounded-lg transition-all ${
-                      doc.received
-                        ? "bg-emerald-50 border border-emerald-200"
-                        : "bg-gray-50 border border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    <div
-                      className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                        doc.received
-                          ? "bg-emerald-500 border-emerald-500"
-                          : "border-gray-300"
-                      }`}
-                    >
-                      {doc.received && (
-                        <svg
-                          className="h-3 w-3 text-white"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={3}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </div>
+                {categoryDocs.map((doc) => {
+                  const isSelectedForRequest = selectedForRequest.has(doc.id);
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm font-medium ${
-                            doc.received ? "text-emerald-900" : "text-gray-900"
+                  return (
+                    <div
+                      key={doc.id}
+                      className={`flex items-start gap-2 ${selectMode ? "pl-2" : ""}`}
+                    >
+                      {/* Select Mode Checkbox */}
+                      {selectMode && !doc.received && (
+                        <button
+                          onClick={() => toggleSelectForRequest(doc.id)}
+                          className={`mt-3 h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            isSelectedForRequest
+                              ? "bg-[#2D4A43] border-[#2D4A43]"
+                              : "border-gray-300 hover:border-[#2D4A43]"
                           }`}
                         >
-                          {doc.name}
-                        </span>
-                        {doc.required && !doc.received && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
-                            Required
-                          </span>
-                        )}
-                      </div>
-                      <p
-                        className={`text-xs mt-0.5 ${
-                          doc.received ? "text-emerald-700" : "text-gray-500"
+                          {isSelectedForRequest && (
+                            <svg
+                              className="h-3 w-3 text-white"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                      {selectMode && doc.received && (
+                        <div className="mt-3 h-5 w-5 flex-shrink-0" />
+                      )}
+
+                      {/* Document Item */}
+                      <button
+                        onClick={() => selectMode && !doc.received ? toggleSelectForRequest(doc.id) : toggleDocument(doc.id)}
+                        className={`flex-1 text-left flex items-start gap-3 p-3 rounded-lg transition-all ${
+                          doc.received
+                            ? "bg-emerald-50 border border-emerald-200"
+                            : isSelectedForRequest
+                            ? "bg-[#2D4A43]/5 border-2 border-[#2D4A43]"
+                            : "bg-gray-50 border border-gray-200 hover:bg-gray-100"
                         }`}
                       >
-                        {doc.description}
-                      </p>
-                      {doc.received && doc.receivedDate && (
-                        <p className="text-xs text-emerald-600 mt-1">
-                          Received {new Date(doc.receivedDate).toLocaleDateString()}
-                        </p>
-                      )}
+                        {/* Received Checkbox */}
+                        <div
+                          className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            doc.received
+                              ? "bg-emerald-500 border-emerald-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {doc.received && (
+                            <svg
+                              className="h-3 w-3 text-white"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-sm font-medium ${
+                                doc.received ? "text-emerald-900" : "text-gray-900"
+                              }`}
+                            >
+                              {doc.name}
+                            </span>
+                            {doc.required && !doc.received && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
+                                Required
+                              </span>
+                            )}
+                          </div>
+                          <p
+                            className={`text-xs mt-0.5 ${
+                              doc.received ? "text-emerald-700" : "text-gray-500"
+                            }`}
+                          >
+                            {doc.description}
+                          </p>
+                          {doc.received && doc.receivedDate && (
+                            <p className="text-xs text-emerald-600 mt-1">
+                              Received {new Date(doc.receivedDate).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </button>
                     </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
@@ -527,38 +683,138 @@ export default function DocumentChecklist({
       {/* Footer */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
-            Click items to mark as received
-          </p>
-          {clientEmail && missingRequired.length > 0 && (
-            <button
-              onClick={handleSendReminder}
-              disabled={sendingReminder}
-              className="text-sm font-medium text-[#2D4A43] hover:text-[#3D5A53] disabled:opacity-50 transition-colors flex items-center gap-1.5"
-            >
-              {sendingReminder ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Send Reminder Email
-                </>
+          {selectMode ? (
+            <>
+              <p className="text-sm text-gray-500">
+                {selectedForRequest.size} document{selectedForRequest.size !== 1 ? "s" : ""} selected
+              </p>
+              <button
+                onClick={() => setShowRequestModal(true)}
+                disabled={selectedForRequest.size === 0}
+                className="rounded-lg bg-[#2D4A43] px-4 py-2 text-sm font-medium text-white hover:bg-[#3D5A53] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Send Request
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-500">
+                Click items to mark as received
+              </p>
+              {clientEmail && missingRequired.length > 0 && (
+                <button
+                  onClick={handleSendReminder}
+                  disabled={sendingReminder}
+                  className="text-sm font-medium text-[#2D4A43] hover:text-[#3D5A53] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                >
+                  {sendingReminder ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send All Missing
+                    </>
+                  )}
+                </button>
               )}
-            </button>
-          )}
-          {!clientEmail && (
-            <span className="text-xs text-gray-400">No email address</span>
+              {!clientEmail && (
+                <span className="text-xs text-gray-400">No email address</span>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* Document Request Modal */}
+      {showRequestModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Send Document Request
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Send an email to <span className="font-medium text-gray-700">{clientEmail}</span> requesting the following documents:
+            </p>
+
+            {/* Selected Documents List */}
+            <div className="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-200 mb-4">
+              {documents
+                .filter((d) => selectedForRequest.has(d.id))
+                .map((doc) => (
+                  <div key={doc.id} className="px-4 py-3 flex items-start gap-3">
+                    <span className="text-[#C9A962] mt-0.5">&#9744;</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                      <p className="text-xs text-gray-500">{doc.description}</p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Result Message */}
+            {requestResult && (
+              <div
+                className={`mb-4 p-3 rounded-lg text-sm ${
+                  requestResult.success
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
+                }`}
+              >
+                {requestResult.message}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRequestModal(false);
+                  setRequestResult(null);
+                }}
+                disabled={sendingRequest}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendDocumentRequest}
+                disabled={sendingRequest}
+                className="rounded-lg bg-[#2D4A43] px-4 py-2 text-sm font-medium text-white hover:bg-[#3D5A53] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {sendingRequest ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Send Request Email
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

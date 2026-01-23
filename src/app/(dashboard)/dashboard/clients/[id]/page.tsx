@@ -8,10 +8,12 @@ import DocumentChecklist from "@/components/clients/DocumentChecklist";
 import DeleteClientButton from "@/components/clients/DeleteClientButton";
 import SendEmailButton from "@/components/clients/SendEmailButton";
 import SendSMSButton from "@/components/clients/SendSMSButton";
+import IntakeAnswers from "@/components/clients/IntakeAnswers";
 
 interface IntakeResponse {
   question_key: string;
   response_value: boolean | number | string | string[];
+  response_type: string;
 }
 
 // Helper function to extract intake answers
@@ -141,7 +143,7 @@ export default async function ClientDetailPage({
     // Fetch intake responses
     const { data: responsesData } = await supabase
       .from("intake_responses")
-      .select("question_key, response_value")
+      .select("question_key, response_value, response_type")
       .eq("client_id", id);
 
     intakeResponses = responsesData;
@@ -405,6 +407,14 @@ export default async function ClientDetailPage({
             clientEmail={client.email}
             intakeLinks={intakeLinks || []}
           />
+
+          {/* Intake Answers - displayed after intake completion */}
+          {intakeResponses && intakeResponses.length > 0 && (
+            <IntakeAnswers
+              responses={intakeResponses}
+              intakeCompletedAt={client.intake_completed_at}
+            />
+          )}
 
           {/* Document Checklist - populated from intake responses */}
           <DocumentChecklist

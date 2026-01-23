@@ -892,6 +892,101 @@ ${getEmailSignatureText()}
   return { subject, html, text };
 }
 
+// Document Request Email - Custom list of documents
+export interface DocumentRequestItem {
+  name: string;
+  description?: string;
+}
+
+export function generateDocumentRequestEmail(
+  clientFirstName: string,
+  documents: DocumentRequestItem[]
+): { subject: string; html: string; text: string } {
+  const subject = "Documents Needed for Your Tax Return - Harvey & Co";
+
+  const documentList = documents
+    .map(
+      (doc) => `
+      <tr>
+        <td style="padding: 12px 16px; border-bottom: 1px solid #E5E5E5;">
+          <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <span style="color: ${BRAND_ACCENT}; font-size: 18px; line-height: 1;">&#9744;</span>
+            <div>
+              <p style="margin: 0; font-weight: 500; color: #1A1A1A;">${doc.name}</p>
+              ${doc.description ? `<p style="margin: 4px 0 0 0; font-size: 13px; color: #6B7280;">${doc.description}</p>` : ""}
+            </div>
+          </div>
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+
+  const content = `
+    <h2 style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-size: 24px; font-weight: 500; color: #1A1A1A;">
+      Hi ${clientFirstName},
+    </h2>
+
+    <p style="margin: 0 0 16px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      We're making great progress on your tax return! To complete your filing, we'll need the following documents from you:
+    </p>
+
+    <div style="background: ${BRAND_BACKGROUND}; border-radius: 12px; overflow: hidden; margin: 24px 0;">
+      <div style="background: ${BRAND_PRIMARY}; padding: 16px 20px;">
+        <h3 style="margin: 0; font-family: 'Georgia', serif; font-size: 18px; color: white;">
+          Documents Needed (${documents.length})
+        </h3>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; background: white;">
+        ${documentList}
+      </table>
+    </div>
+
+    <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="margin: 0; font-size: 14px; color: #92400E;">
+        <strong>Tip:</strong> You can reply to this email with photos or scans of your documents,
+        or upload them through our secure portal. Clear, readable images work best!
+      </p>
+    </div>
+
+    <p style="margin: 24px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
+      If you have any questions about what's needed or where to find these documents,
+      don't hesitate to reach out. I'm happy to help!
+    </p>
+
+    <p style="margin: 24px 0 0 0; font-size: 14px; color: #6B7280;">
+      The sooner we receive these documents, the sooner we can complete your return and get your refund on its way.
+    </p>
+
+    ${getEmailSignature()}
+  `;
+
+  const html = wrapEmailTemplate(content, `${clientFirstName}, we need ${documents.length} document${documents.length > 1 ? "s" : ""} from you`);
+
+  const documentListText = documents
+    .map((doc) => `- ${doc.name}${doc.description ? ` (${doc.description})` : ""}`)
+    .join("\n");
+
+  const text = `
+Hi ${clientFirstName},
+
+We're making great progress on your tax return! To complete your filing, we'll need the following documents from you:
+
+DOCUMENTS NEEDED (${documents.length}):
+${documentListText}
+
+TIP: You can reply to this email with photos or scans of your documents, or upload them through our secure portal. Clear, readable images work best!
+
+If you have any questions about what's needed or where to find these documents, don't hesitate to reach out. I'm happy to help!
+
+The sooner we receive these documents, the sooner we can complete your return and get your refund on its way.
+
+${getEmailSignatureText()}
+  `.trim();
+
+  return { subject, html, text };
+}
+
 // Helper function to generate campaign email by type
 export function generateCampaignEmail(
   type: CampaignType,
