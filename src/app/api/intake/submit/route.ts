@@ -269,8 +269,10 @@ export async function POST(request: NextRequest) {
 
     if (responseError) {
       console.error("Error saving intake responses:", responseError);
-      // Don't fail the whole submission
-    }
+      return NextResponse.json(
+        { error: "Failed to save intake responses", details: responseError.message },
+        { status: 500 }
+      );    }
 
     // Mark the intake link as used (only if not self-service)
     if (!isSelfService && link) {
