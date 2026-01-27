@@ -275,8 +275,8 @@ export default function IntakeForm({
 
           <p className="text-sm text-gray-500">
             Questions? Contact us at{" "}
-            <a href="mailto:support@harveyco.com" className="text-[#2D4A43] hover:underline">
-              support@harveyco.com
+            <a href="mailto:team@harveynco.com" className="text-[#2D4A43] hover:underline">
+              team@harveynco.com
             </a>
           </p>
         </div>
