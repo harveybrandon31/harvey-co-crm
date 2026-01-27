@@ -1,6 +1,7 @@
 "use client";
 
 import { IntakeFormData } from "../IntakeForm";
+import DateInput from "../DateInput";
 
 interface DependentsStepProps {
   formData: IntakeFormData;
@@ -162,11 +163,11 @@ export default function DependentsStep({
                   <label className={labelClass}>
                     Date of Birth <span className="text-[#2D4A43]">*</span>
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
+                    id={`dep-dob-${dependent.id}`}
                     value={dependent.dateOfBirth}
-                    onChange={(e) =>
-                      updateDependent(dependent.id, "dateOfBirth", e.target.value)
+                    onChange={(value) =>
+                      updateDependent(dependent.id, "dateOfBirth", value)
                     }
                     className={inputClass}
                     required

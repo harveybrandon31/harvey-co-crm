@@ -1,6 +1,7 @@
 "use client";
 
 import { IntakeFormData } from "../IntakeForm";
+import DateInput from "../DateInput";
 
 interface FilingStatusStepProps {
   formData: IntakeFormData;
@@ -162,11 +163,10 @@ export default function FilingStatusStep({
                 <label htmlFor="spouseDob" className={labelClass}>
                   Spouse Date of Birth <span className="text-[#2D4A43]">*</span>
                 </label>
-                <input
-                  type="date"
+                <DateInput
                   id="spouseDob"
                   value={formData.spouseDob}
-                  onChange={(e) => updateFormData({ spouseDob: e.target.value })}
+                  onChange={(value) => updateFormData({ spouseDob: value })}
                   className={inputClass}
                   required
                 />

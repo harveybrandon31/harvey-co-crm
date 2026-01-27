@@ -1,6 +1,7 @@
 "use client";
 
 import { IntakeFormData } from "../IntakeForm";
+import DateInput from "../DateInput";
 
 interface PersonalInfoStepProps {
   formData: IntakeFormData;
@@ -101,11 +102,10 @@ export default function PersonalInfoStep({
           <label htmlFor="dateOfBirth" className={labelClass}>
             Date of Birth <span className="text-[#2D4A43]">*</span>
           </label>
-          <input
-            type="date"
+          <DateInput
             id="dateOfBirth"
             value={formData.dateOfBirth}
-            onChange={(e) => updateFormData({ dateOfBirth: e.target.value })}
+            onChange={(value) => updateFormData({ dateOfBirth: value })}
             className={inputClass}
             required
           />

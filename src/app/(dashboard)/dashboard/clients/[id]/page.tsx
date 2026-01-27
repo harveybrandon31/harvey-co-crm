@@ -9,6 +9,7 @@ import DeleteClientButton from "@/components/clients/DeleteClientButton";
 import SendEmailButton from "@/components/clients/SendEmailButton";
 import SendSMSButton from "@/components/clients/SendSMSButton";
 import IntakeAnswers from "@/components/clients/IntakeAnswers";
+import RevealSSN from "@/components/clients/RevealSSN";
 
 interface IntakeResponse {
   question_key: string;
@@ -27,10 +28,12 @@ function getIntakeAnswer<T>(responses: IntakeResponse[] | null, key: string, def
 // Extended client type for intake data
 interface ClientWithIntake extends Client {
   date_of_birth?: string | null;
+  ssn_encrypted?: string | null;
   has_spouse?: boolean;
   spouse_first_name?: string | null;
   spouse_last_name?: string | null;
   spouse_dob?: string | null;
+  spouse_ssn_encrypted?: string | null;
   intake_completed?: boolean;
   intake_completed_at?: string | null;
   pipeline_status?: string;
@@ -256,12 +259,11 @@ export default async function ClientDetailPage({
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Tax Information</h2>
             <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">SSN (Last 4)</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {client.ssn_last_four ? `***-**-${client.ssn_last_four}` : "-"}
-                </dd>
-              </div>
+              <RevealSSN
+                encryptedSSN={client.ssn_encrypted || null}
+                lastFour={client.ssn_last_four}
+                label="Social Security Number"
+              />
               <div>
                 <dt className="text-sm font-medium text-gray-500">Filing Status</dt>
                 <dd className="mt-1 text-sm text-gray-900">
@@ -293,7 +295,7 @@ export default async function ClientDetailPage({
           {client.has_spouse && (
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Spouse Information</h2>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Spouse Name</dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -308,6 +310,10 @@ export default async function ClientDetailPage({
                     </dd>
                   </div>
                 )}
+                <RevealSSN
+                  encryptedSSN={client.spouse_ssn_encrypted || null}
+                  label="Spouse SSN"
+                />
               </dl>
             </div>
           )}
@@ -318,8 +324,8 @@ export default async function ClientDetailPage({
               <h2 className="text-lg font-medium text-gray-900 mb-4">Dependents</h2>
               <ul className="divide-y divide-gray-200">
                 {dependents.map((dep) => (
-                  <li key={dep.id} className="py-3">
-                    <div className="flex items-center justify-between">
+                  <li key={dep.id} className="py-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                       <div>
                         <p className="text-sm font-medium text-gray-900">
                           {dep.first_name} {dep.last_name}
@@ -330,11 +336,18 @@ export default async function ClientDetailPage({
                           </p>
                         )}
                       </div>
-                      {dep.date_of_birth && (
-                        <span className="text-xs text-gray-500">
-                          DOB: {new Date(dep.date_of_birth).toLocaleDateString()}
-                        </span>
-                      )}
+                      <div>
+                        <p className="text-xs text-gray-500">Date of Birth</p>
+                        <p className="text-sm text-gray-900">
+                          {dep.date_of_birth ? new Date(dep.date_of_birth).toLocaleDateString() : "-"}
+                        </p>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <RevealSSN
+                          encryptedSSN={dep.ssn_encrypted || null}
+                          label="SSN"
+                        />
+                      </div>
                     </div>
                   </li>
                 ))}
