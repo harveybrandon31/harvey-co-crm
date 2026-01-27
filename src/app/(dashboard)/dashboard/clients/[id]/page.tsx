@@ -30,6 +30,7 @@ interface ClientWithIntake extends Client {
   has_spouse?: boolean;
   spouse_first_name?: string | null;
   spouse_last_name?: string | null;
+  spouse_dob?: string | null;
   intake_completed?: boolean;
   intake_completed_at?: string | null;
   pipeline_status?: string;
@@ -299,6 +300,14 @@ export default async function ClientDetailPage({
                     {client.spouse_first_name} {client.spouse_last_name}
                   </dd>
                 </div>
+                {client.spouse_dob && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Spouse Date of Birth</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {new Date(client.spouse_dob).toLocaleDateString()}
+                    </dd>
+                  </div>
+                )}
               </dl>
             </div>
           )}

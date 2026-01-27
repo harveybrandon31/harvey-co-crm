@@ -1,11 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { IntakeFormData } from "../IntakeForm";
 
 interface DocumentsStepProps {
   formData: IntakeFormData;
   updateFormData: (updates: Partial<IntakeFormData>) => void;
   token: string;
+}
+
+interface UploadingFile {
+  id: string;
+  name: string;
+  category: string;
+  progress: "uploading" | "success" | "error";
+  error?: string;
 }
 
 const DOCUMENT_CATEGORIES = [
@@ -19,9 +28,12 @@ const DOCUMENT_CATEGORIES = [
 export default function DocumentsStep({
   formData,
   updateFormData,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   token,
 }: DocumentsStepProps) {
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+
+  // Check if we're in demo mode
+  const isDemoMode = token === "demo" || token.startsWith("demo-token-");
 
   const handleFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -32,27 +44,118 @@ export default function DocumentsStep({
 
     console.log(`[DocumentsStep] Files selected: ${files.length} files in category "${category}"`);
 
-    const newDocs = Array.from(files).map((file) => {
-      console.log(`[DocumentsStep] Creating doc for file: ${file.name}, size: ${file.size}, type: ${file.type}`);
-      return {
-        id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    // Reset the input immediately
+    e.target.value = "";
+
+    // Process each file - upload immediately
+    for (const file of Array.from(files)) {
+      const tempId = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      console.log(`[DocumentsStep] Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+
+      // Add to uploading state
+      setUploadingFiles(prev => [...prev, {
+        id: tempId,
         name: file.name,
         category,
-        file,
-        uploaded: false,
-      };
-    });
+        progress: "uploading"
+      }]);
 
-    const updatedDocs = [...formData.uploadedDocuments, ...newDocs];
-    console.log(`[DocumentsStep] Updating formData with ${updatedDocs.length} total documents`);
-    console.log(`[DocumentsStep] Documents with File objects: ${updatedDocs.filter(d => d.file instanceof File).length}`);
+      if (isDemoMode) {
+        // In demo mode, simulate upload
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    updateFormData({
-      uploadedDocuments: updatedDocs,
-    });
+        // Update uploading state to success
+        setUploadingFiles(prev => prev.map(f =>
+          f.id === tempId ? { ...f, progress: "success" as const } : f
+        ));
 
-    // Reset the input
-    e.target.value = "";
+        // Add to formData without file object (demo mode doesn't need actual file)
+        updateFormData({
+          uploadedDocuments: [...formData.uploadedDocuments, {
+            id: tempId,
+            name: file.name,
+            category,
+            uploaded: true,
+          }],
+        });
+
+        // Remove from uploading state after a delay
+        setTimeout(() => {
+          setUploadingFiles(prev => prev.filter(f => f.id !== tempId));
+        }, 1000);
+
+        continue;
+      }
+
+      // Real upload
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", file);
+        uploadFormData.append("category", category);
+        uploadFormData.append("tempId", tempId);
+
+        console.log(`[DocumentsStep] Uploading to /api/intake/upload`);
+
+        const response = await fetch("/api/intake/upload", {
+          method: "POST",
+          body: uploadFormData,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`[DocumentsStep] Upload success:`, result);
+
+          // Update uploading state to success
+          setUploadingFiles(prev => prev.map(f =>
+            f.id === tempId ? { ...f, progress: "success" as const } : f
+          ));
+
+          // Add to formData with the filePath from server
+          updateFormData({
+            uploadedDocuments: [...formData.uploadedDocuments, {
+              id: tempId,
+              name: file.name,
+              category,
+              uploaded: true,
+              filePath: result.filePath,
+              fileType: result.fileType,
+              fileSize: result.fileSize,
+            }],
+          });
+
+          // Remove from uploading state after a delay
+          setTimeout(() => {
+            setUploadingFiles(prev => prev.filter(f => f.id !== tempId));
+          }, 1000);
+        } else {
+          const errorText = await response.text();
+          console.error(`[DocumentsStep] Upload failed:`, response.status, errorText);
+
+          // Update uploading state to error
+          setUploadingFiles(prev => prev.map(f =>
+            f.id === tempId ? { ...f, progress: "error" as const, error: "Upload failed" } : f
+          ));
+
+          // Remove from uploading state after a delay
+          setTimeout(() => {
+            setUploadingFiles(prev => prev.filter(f => f.id !== tempId));
+          }, 3000);
+        }
+      } catch (error) {
+        console.error(`[DocumentsStep] Upload error:`, error);
+
+        // Update uploading state to error
+        setUploadingFiles(prev => prev.map(f =>
+          f.id === tempId ? { ...f, progress: "error" as const, error: "Network error" } : f
+        ));
+
+        // Remove from uploading state after a delay
+        setTimeout(() => {
+          setUploadingFiles(prev => prev.filter(f => f.id !== tempId));
+        }, 3000);
+      }
+    }
   };
 
   const removeDocument = (docId: string) => {
@@ -65,6 +168,10 @@ export default function DocumentsStep({
     return formData.uploadedDocuments.filter((d) => d.category === category);
   };
 
+  const getUploadingByCategory = (category: string) => {
+    return uploadingFiles.filter((f) => f.category === category);
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -72,6 +179,7 @@ export default function DocumentsStep({
   };
 
   const driversLicenseDocs = getDocsByCategory("drivers_license");
+  const driversLicenseUploading = getUploadingByCategory("drivers_license");
 
   return (
     <div className="space-y-6">
@@ -100,6 +208,43 @@ export default function DocumentsStep({
               This speeds up the tax preparation process.
             </p>
 
+            {/* Show uploading driver's license files */}
+            {driversLicenseUploading.length > 0 && (
+              <div className="space-y-2 mb-2">
+                {driversLicenseUploading.map((file) => (
+                  <div
+                    key={file.id}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                      file.progress === "error" ? "bg-red-500/20" : "bg-white/10"
+                    }`}
+                  >
+                    <div className="flex items-center min-w-0">
+                      {file.progress === "uploading" && (
+                        <svg className="animate-spin h-5 w-5 text-white/80 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                      {file.progress === "success" && (
+                        <svg className="h-5 w-5 text-green-400 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                      {file.progress === "error" && (
+                        <svg className="h-5 w-5 text-red-300 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                      <span className="text-sm truncate">{file.name}</span>
+                      <span className="ml-2 text-xs text-white/60">
+                        {file.progress === "uploading" ? "Uploading..." : file.progress === "success" ? "Uploaded!" : file.error || "Failed"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {driversLicenseDocs.length > 0 ? (
               <div className="space-y-2">
                 {driversLicenseDocs.map((doc) => (
@@ -112,9 +257,9 @@ export default function DocumentsStep({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span className="text-sm truncate">{doc.name}</span>
-                      {doc.file && (
+                      {doc.fileSize && (
                         <span className="ml-2 text-xs text-white/60">
-                          ({formatFileSize(doc.file.size)})
+                          ({formatFileSize(doc.fileSize)})
                         </span>
                       )}
                     </div>
@@ -130,7 +275,7 @@ export default function DocumentsStep({
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : driversLicenseUploading.length === 0 ? (
               <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-white text-[#2D4A43] text-sm font-medium rounded-lg hover:bg-white/90 transition-all">
                 <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -143,7 +288,7 @@ export default function DocumentsStep({
                   onChange={(e) => handleFileSelect(e, "drivers_license")}
                 />
               </label>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -163,6 +308,7 @@ export default function DocumentsStep({
       <div className="space-y-4">
         {DOCUMENT_CATEGORIES.map((category) => {
           const docs = getDocsByCategory(category.id);
+          const uploading = getUploadingByCategory(category.id);
           return (
             <div
               key={category.id}
@@ -200,6 +346,45 @@ export default function DocumentsStep({
                 </label>
               </div>
 
+              {/* Show uploading files */}
+              {uploading.length > 0 && (
+                <ul className="space-y-2 mb-2">
+                  {uploading.map((file) => (
+                    <li
+                      key={file.id}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg ${
+                        file.progress === "error" ? "bg-red-50" : "bg-blue-50"
+                      }`}
+                    >
+                      <div className="flex items-center min-w-0">
+                        {file.progress === "uploading" && (
+                          <svg className="animate-spin h-5 w-5 text-blue-500 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        )}
+                        {file.progress === "success" && (
+                          <svg className="h-5 w-5 text-green-500 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
+                        {file.progress === "error" && (
+                          <svg className="h-5 w-5 text-red-500 mr-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
+                        <span className="text-sm text-gray-700 truncate">
+                          {file.name}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          {file.progress === "uploading" ? "Uploading..." : file.progress === "success" ? "Uploaded!" : file.error || "Failed"}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               {docs.length > 0 ? (
                 <ul className="space-y-2">
                   {docs.map((doc) => (
@@ -224,9 +409,9 @@ export default function DocumentsStep({
                         <span className="text-sm text-gray-700 truncate">
                           {doc.name}
                         </span>
-                        {doc.file && (
+                        {doc.fileSize && (
                           <span className="ml-2 text-xs text-gray-500">
-                            ({formatFileSize(doc.file.size)})
+                            ({formatFileSize(doc.fileSize)})
                           </span>
                         )}
                       </div>
