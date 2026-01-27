@@ -201,6 +201,64 @@ export default function IntakeForm({
         return;
       }
 
+      // Step 1: Upload any files that haven't been uploaded yet
+      const uploadedDocs: Array<{
+        id: string;
+        name: string;
+        category: string;
+        filePath?: string;
+        fileType?: string;
+        fileSize?: number;
+      }> = [];
+
+      for (const doc of formData.uploadedDocuments) {
+        if (doc.file && !doc.uploaded) {
+          // Upload the file
+          const uploadFormData = new FormData();
+          uploadFormData.append("file", doc.file);
+          uploadFormData.append("category", doc.category);
+          uploadFormData.append("tempId", doc.id);
+
+          const uploadResponse = await fetch("/api/intake/upload", {
+            method: "POST",
+            body: uploadFormData,
+          });
+
+          if (uploadResponse.ok) {
+            const uploadResult = await uploadResponse.json();
+            uploadedDocs.push({
+              id: doc.id,
+              name: doc.name,
+              category: doc.category,
+              filePath: uploadResult.filePath,
+              fileType: uploadResult.fileType,
+              fileSize: uploadResult.fileSize,
+            });
+          } else {
+            console.error("Failed to upload file:", doc.name);
+            // Continue with other files, don't fail entire submission
+            uploadedDocs.push({
+              id: doc.id,
+              name: doc.name,
+              category: doc.category,
+            });
+          }
+        } else {
+          // Already uploaded or no file
+          uploadedDocs.push({
+            id: doc.id,
+            name: doc.name,
+            category: doc.category,
+          });
+        }
+      }
+
+      // Step 2: Submit the form with uploaded file paths
+      const submissionData = {
+        ...formData,
+        uploadedDocuments: uploadedDocs,
+      };
+
       const response = await fetch("/api/intake/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -208,12 +266,13 @@ export default function IntakeForm({
           token,
           linkId,
           clientId,
-          formData,
+          formData: submissionData,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit intake form");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit intake form");
       }
 
       setSubmitted(true);

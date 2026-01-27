@@ -79,6 +79,9 @@ interface IntakeSubmission {
       id: string;
       name: string;
       category: string;
+      filePath?: string;
+      fileType?: string;
+      fileSize?: number;
     }>;
     additionalNotes: string;
   };
@@ -218,13 +221,59 @@ export async function POST(request: NextRequest) {
         months_lived_with: dep.monthsLivedWith,
       }));
 
-      const { error: depError } = await supabase
+      console.log("Attempting to save dependents:", JSON.stringify(dependentsData, null, 2));
+
+      const { data: depData, error: depError } = await supabase
         .from("dependents")
-        .insert(dependentsData);
+        .insert(dependentsData)
+        .select();
 
       if (depError) {
         console.error("Error saving dependents:", depError);
-        // Don't fail the whole submission for dependent errors
+        console.error("Dependents data attempted:", JSON.stringify(dependentsData));
+        // Return error to user so they know dependents weren't saved
+        return NextResponse.json(
+          {
+            error: `Failed to save dependents: ${depError.message}`,
+            details: depError,
+            clientId
+          },
+          { status: 500 }
+        );
+      }
+
+      console.log("Successfully saved dependents:", depData?.length, "records");
+    }
+
+    // Save uploaded documents
+    if (formData.uploadedDocuments.length > 0) {
+      const docsWithPaths = formData.uploadedDocuments.filter(doc => doc.filePath);
+
+      if (docsWithPaths.length > 0) {
+        const documentsData = docsWithPaths.map((doc) => ({
+          client_id: clientId,
+          name: doc.name,
+          file_path: doc.filePath,
+          file_type: doc.fileType || null,
+          file_size: doc.fileSize || null,
+          category: doc.category || "other",
+          tax_year: new Date().getFullYear(),
+        }));
+
+        console.log("Attempting to save documents:", JSON.stringify(documentsData, null, 2));
+
+        const { data: docData, error: docError } = await supabase
+          .from("documents")
+          .insert(documentsData)
+          .select();
+
+        if (docError) {
+          console.error("Error saving documents:", docError);
+          console.error("Documents data attempted:", JSON.stringify(documentsData));
+          // Don't fail submission for document errors, just log
+        } else {
+          console.log("Successfully saved documents:", docData?.length, "records");
+        }
       }
     }
 
@@ -259,20 +308,33 @@ export async function POST(request: NextRequest) {
       tax_year: taxYear,
       step_number: r.step,
       question_key: r.key,
-      response_value: r.value,
+      // Ensure response_value is properly serialized for JSONB
+      response_value: r.value === undefined ? null : r.value,
       response_type: r.type,
     }));
 
-    const { error: responseError } = await supabase
+    console.log("Attempting to save intake responses:", JSON.stringify(responsesData, null, 2));
+
+    const { data: responseData, error: responseError } = await supabase
       .from("intake_responses")
-      .insert(responsesData);
+      .insert(responsesData)
+      .select();
 
     if (responseError) {
       console.error("Error saving intake responses:", responseError);
+      console.error("Response data attempted:", JSON.stringify(responsesData));
+      // Return error to user so they know responses weren't saved
       return NextResponse.json(
-        { error: "Failed to save intake responses", details: responseError.message },
+        {
+          error: `Failed to save intake responses: ${responseError.message}`,
+          details: responseError,
+          clientId // Still return clientId so they can retry
+        },
         { status: 500 }
-      );    }
+      );
+    }
+
+    console.log("Successfully saved intake responses:", responseData?.length, "records");
 
     // Mark the intake link as used (only if not self-service)
     if (!isSelfService && link) {

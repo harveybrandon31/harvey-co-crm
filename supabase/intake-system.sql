@@ -41,10 +41,19 @@ CREATE TABLE IF NOT EXISTS public.dependents (
 
   client_id uuid REFERENCES public.clients(id) ON DELETE CASCADE NOT NULL,
 
-  full_name text NOT NULL,
+  -- Name fields
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+
+  -- Personal info
   date_of_birth date,
-  relationship text CHECK (relationship IN ('child', 'stepchild', 'foster_child', 'sibling', 'parent', 'grandparent', 'grandchild', 'niece_nephew', 'other')),
-  lived_with_more_than_half_year boolean DEFAULT true,
+  ssn_encrypted text, -- Encrypted SSN
+
+  -- Relationship - flexible text to match form values
+  relationship text,
+
+  -- Living situation
+  months_lived_with integer DEFAULT 12,
 
   -- For tax purposes
   is_student boolean DEFAULT false,
@@ -55,6 +64,8 @@ CREATE TABLE IF NOT EXISTS public.dependents (
 -- STEP 3: Create intake_responses table
 -- ============================================
 
+-- Using a normalized key-value structure to store intake responses
+-- This allows flexibility in the questions asked without schema changes
 CREATE TABLE IF NOT EXISTS public.intake_responses (
   id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -63,46 +74,11 @@ CREATE TABLE IF NOT EXISTS public.intake_responses (
   client_id uuid REFERENCES public.clients(id) ON DELETE CASCADE NOT NULL,
   tax_year integer DEFAULT EXTRACT(YEAR FROM CURRENT_DATE)::integer,
 
-  -- Income Sources (boolean flags)
-  has_w2_income boolean DEFAULT false,
-  w2_employer_count integer,
-  has_self_employment boolean DEFAULT false,
-  self_employment_income_range text CHECK (self_employment_income_range IN ('under_10k', '10k_30k', '30k_75k', 'over_75k')),
-  has_1099_forms boolean DEFAULT false,
-  has_rental_income boolean DEFAULT false,
-  rental_property_count integer,
-  has_retirement_income boolean DEFAULT false,
-  has_unemployment boolean DEFAULT false,
-  has_investment_income boolean DEFAULT false,
-  sold_stocks_crypto boolean DEFAULT false,
-  other_income_description text,
-
-  -- Business Expenses (if self-employed)
-  business_expense_range text CHECK (business_expense_range IN ('under_500', '500_2000', '2000_5000', '5000_10000', 'over_10000')),
-
-  -- Common Deductions (boolean flags)
-  has_home_office boolean DEFAULT false,
-  has_business_vehicle boolean DEFAULT false,
-  has_business_supplies boolean DEFAULT false,
-  has_self_paid_health_insurance boolean DEFAULT false,
-  has_childcare_expenses boolean DEFAULT false,
-  has_student_loan_interest boolean DEFAULT false,
-
-  -- Life Events (boolean flags)
-  bought_sold_home boolean DEFAULT false,
-  got_married_divorced boolean DEFAULT false,
-  had_baby_new_dependent boolean DEFAULT false,
-  moved_states boolean DEFAULT false,
-  has_marketplace_insurance boolean DEFAULT false,
-  had_debt_forgiven boolean DEFAULT false,
-
-  -- Additional info
-  additional_notes text,
-
-  -- Submission tracking
-  submitted_at timestamp with time zone,
-  ip_address text,
-  user_agent text
+  -- Normalized key-value structure
+  step_number integer,
+  question_key text NOT NULL,
+  response_value jsonb, -- Stores various types: boolean, number, string, array
+  response_type text NOT NULL CHECK (response_type IN ('boolean', 'number', 'text', 'array'))
 );
 
 -- ============================================
@@ -239,6 +215,10 @@ CREATE POLICY "Intake links can insert dependents" ON public.dependents
     )
   );
 
+-- Allow service role full access (needed for API submissions)
+CREATE POLICY "Service role can manage all dependents" ON public.dependents
+  FOR ALL USING (auth.role() = 'service_role');
+
 -- ============================================
 -- STEP 9: RLS Policies for intake_responses
 -- ============================================
@@ -260,6 +240,10 @@ CREATE POLICY "Users can manage intake responses of own clients" ON public.intak
       AND clients.user_id = auth.uid()
     )
   );
+
+-- Allow service role full access (needed for API submissions)
+CREATE POLICY "Service role can manage all intake responses" ON public.intake_responses
+  FOR ALL USING (auth.role() = 'service_role');
 
 -- ============================================
 -- STEP 10: RLS Policies for intake_links
@@ -304,6 +288,8 @@ CREATE POLICY "Users can delete own tasks" ON public.tasks
 CREATE INDEX IF NOT EXISTS idx_dependents_client_id ON public.dependents(client_id);
 CREATE INDEX IF NOT EXISTS idx_intake_responses_client_id ON public.intake_responses(client_id);
 CREATE INDEX IF NOT EXISTS idx_intake_responses_tax_year ON public.intake_responses(tax_year);
+CREATE INDEX IF NOT EXISTS idx_intake_responses_question_key ON public.intake_responses(question_key);
+CREATE INDEX IF NOT EXISTS idx_intake_responses_client_year ON public.intake_responses(client_id, tax_year);
 CREATE INDEX IF NOT EXISTS idx_intake_links_token ON public.intake_links(token);
 CREATE INDEX IF NOT EXISTS idx_intake_links_expires_at ON public.intake_links(expires_at);
 CREATE INDEX IF NOT EXISTS idx_intake_links_client_id ON public.intake_links(client_id);
