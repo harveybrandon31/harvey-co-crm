@@ -22,6 +22,7 @@ export default function ClientIntakeLinkSection({
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newLinkUrl, setNewLinkUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const getStatus = (link: IntakeLink) => {
     if (link.used_at) {
@@ -44,6 +45,7 @@ export default function ClientIntakeLinkSection({
   const generateNewLink = async () => {
     setIsGenerating(true);
     setNewLinkUrl(null);
+    setError(null);
 
     if (DEMO_MODE) {
       const demoToken = Math.random().toString(36).substring(2, 18);
@@ -66,6 +68,7 @@ export default function ClientIntakeLinkSection({
     }
 
     try {
+      console.log("Creating intake link for client:", clientName, clientEmail);
       const result = await createIntakeLink({
         email: clientEmail || undefined,
         prefillFirstName: clientName.split(" ")[0],
@@ -73,13 +76,18 @@ export default function ClientIntakeLinkSection({
         expiresInDays: 30,
       });
 
+      console.log("Create intake link result:", result);
+
       if (result.success && result.url) {
         setNewLinkUrl(result.url);
         // Refresh will show the new link
         window.location.reload();
+      } else {
+        setError(result.error || "Failed to create intake link");
       }
-    } catch (error) {
-      console.error("Error generating link:", error);
+    } catch (err) {
+      console.error("Error generating link:", err);
+      setError("An unexpected error occurred");
     } finally {
       setIsGenerating(false);
     }
@@ -100,17 +108,21 @@ export default function ClientIntakeLinkSection({
     <div className="bg-white shadow rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-medium text-gray-900">Intake Links</h2>
-        {!hasActiveLink && (
-          <button
-            type="button"
-            onClick={generateNewLink}
-            disabled={isGenerating}
-            className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
-          >
-            {isGenerating ? "Generating..." : "+ Generate Link"}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={generateNewLink}
+          disabled={isGenerating}
+          className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+        >
+          {isGenerating ? "Generating..." : "+ Generate New Link"}
+        </button>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
 
       {newLinkUrl && (
         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
@@ -198,7 +210,7 @@ export default function ClientIntakeLinkSection({
 
       {hasActiveLink && (
         <p className="text-xs text-gray-500 mt-3">
-          An active link already exists. Wait for it to expire or be used before generating a new one.
+          Note: An active link already exists for this client.
         </p>
       )}
     </div>

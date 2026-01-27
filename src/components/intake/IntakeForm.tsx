@@ -211,32 +211,52 @@ export default function IntakeForm({
         fileSize?: number;
       }> = [];
 
+      console.log("Documents to upload:", formData.uploadedDocuments.length);
+      console.log("Documents with files:", formData.uploadedDocuments.filter(d => d.file).length);
+
       for (const doc of formData.uploadedDocuments) {
+        console.log(`Processing doc: ${doc.name}, hasFile: ${!!doc.file}, uploaded: ${doc.uploaded}`);
+
         if (doc.file && !doc.uploaded) {
+          console.log(`Uploading file: ${doc.name}, size: ${doc.file.size}, type: ${doc.file.type}`);
+
           // Upload the file
           const uploadFormData = new FormData();
           uploadFormData.append("file", doc.file);
           uploadFormData.append("category", doc.category);
           uploadFormData.append("tempId", doc.id);
 
-          const uploadResponse = await fetch("/api/intake/upload", {
-            method: "POST",
-            body: uploadFormData,
-          });
-
-          if (uploadResponse.ok) {
-            const uploadResult = await uploadResponse.json();
-            uploadedDocs.push({
-              id: doc.id,
-              name: doc.name,
-              category: doc.category,
-              filePath: uploadResult.filePath,
-              fileType: uploadResult.fileType,
-              fileSize: uploadResult.fileSize,
+          try {
+            const uploadResponse = await fetch("/api/intake/upload", {
+              method: "POST",
+              body: uploadFormData,
             });
-          } else {
-            console.error("Failed to upload file:", doc.name);
-            // Continue with other files, don't fail entire submission
+
+            console.log(`Upload response status: ${uploadResponse.status}`);
+
+            if (uploadResponse.ok) {
+              const uploadResult = await uploadResponse.json();
+              console.log(`Upload success:`, uploadResult);
+              uploadedDocs.push({
+                id: doc.id,
+                name: doc.name,
+                category: doc.category,
+                filePath: uploadResult.filePath,
+                fileType: uploadResult.fileType,
+                fileSize: uploadResult.fileSize,
+              });
+            } else {
+              const errorText = await uploadResponse.text();
+              console.error(`Failed to upload file: ${doc.name}`, errorText);
+              // Continue with other files, don't fail entire submission
+              uploadedDocs.push({
+                id: doc.id,
+                name: doc.name,
+                category: doc.category,
+              });
+            }
+          } catch (uploadError) {
+            console.error(`Upload error for ${doc.name}:`, uploadError);
             uploadedDocs.push({
               id: doc.id,
               name: doc.name,
@@ -244,6 +264,7 @@ export default function IntakeForm({
             });
           }
         } else {
+          console.log(`Skipping upload for ${doc.name}: file=${!!doc.file}, uploaded=${doc.uploaded}`);
           // Already uploaded or no file
           uploadedDocs.push({
             id: doc.id,
@@ -252,6 +273,8 @@ export default function IntakeForm({
           });
         }
       }
+
+      console.log("Final uploadedDocs:", uploadedDocs);
 
       // Step 2: Submit the form with uploaded file paths
       const submissionData = {
