@@ -5,6 +5,7 @@ import { generateIntakeToken, generateIntakeUrl, getExpirationDate } from "./tok
 import { revalidatePath } from "next/cache";
 
 export interface CreateIntakeLinkInput {
+  clientId?: string;
   email?: string;
   prefillFirstName?: string;
   prefillLastName?: string;
@@ -50,6 +51,7 @@ export async function createIntakeLink(input: CreateIntakeLinkInput): Promise<In
       .from("intake_links")
       .insert({
         token,
+        client_id: input.clientId || null,
         email: input.email || null,
         expires_at: expiresAt.toISOString(),
         created_by: user.id,

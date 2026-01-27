@@ -68,8 +68,9 @@ export default function ClientIntakeLinkSection({
     }
 
     try {
-      console.log("Creating intake link for client:", clientName, clientEmail);
+      console.log("Creating intake link for client:", clientId, clientName, clientEmail);
       const result = await createIntakeLink({
+        clientId: clientId,
         email: clientEmail || undefined,
         prefillFirstName: clientName.split(" ")[0],
         prefillLastName: clientName.split(" ").slice(1).join(" "),
