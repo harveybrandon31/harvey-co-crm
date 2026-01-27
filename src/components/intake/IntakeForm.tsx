@@ -194,6 +194,9 @@ export default function IntakeForm({
       // In demo mode with demo token, just show success
       const isDemoMode = token === "demo" || linkId === "demo-link-id" ||
         token.startsWith("demo-token-") || linkId.startsWith("demo-");
+
+      console.log("[IntakeForm] Submit started - token:", token, "linkId:", linkId, "isDemoMode:", isDemoMode);
+
       if (isDemoMode) {
         // Simulate a brief delay
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -211,32 +214,48 @@ export default function IntakeForm({
         fileSize?: number;
       }> = [];
 
-      console.log("Documents to upload:", formData.uploadedDocuments.length);
-      console.log("Documents with files:", formData.uploadedDocuments.filter(d => d.file).length);
+      const totalDocs = formData.uploadedDocuments.length;
+      const docsWithFiles = formData.uploadedDocuments.filter(d => d.file instanceof File);
+      const docsToUpload = docsWithFiles.filter(d => !d.uploaded);
+
+      console.log("[IntakeForm] Document stats:", {
+        total: totalDocs,
+        withFileObjects: docsWithFiles.length,
+        needingUpload: docsToUpload.length,
+        documents: formData.uploadedDocuments.map(d => ({
+          id: d.id,
+          name: d.name,
+          hasFile: d.file instanceof File,
+          fileType: d.file instanceof File ? d.file.type : 'no file',
+          fileSize: d.file instanceof File ? d.file.size : 0,
+          uploaded: d.uploaded
+        }))
+      });
 
       for (const doc of formData.uploadedDocuments) {
-        console.log(`Processing doc: ${doc.name}, hasFile: ${!!doc.file}, uploaded: ${doc.uploaded}`);
+        // Check if file is actually a File object
+        const hasValidFile = doc.file instanceof File;
 
-        if (doc.file && !doc.uploaded) {
-          console.log(`Uploading file: ${doc.name}, size: ${doc.file.size}, type: ${doc.file.type}`);
+        if (hasValidFile && !doc.uploaded) {
+          console.log(`[IntakeForm] Uploading: ${doc.name} (${doc.file!.size} bytes, ${doc.file!.type})`);
 
-          // Upload the file
           const uploadFormData = new FormData();
-          uploadFormData.append("file", doc.file);
+          uploadFormData.append("file", doc.file!);
           uploadFormData.append("category", doc.category);
           uploadFormData.append("tempId", doc.id);
 
           try {
+            console.log(`[IntakeForm] Sending POST to /api/intake/upload`);
             const uploadResponse = await fetch("/api/intake/upload", {
               method: "POST",
               body: uploadFormData,
             });
 
-            console.log(`Upload response status: ${uploadResponse.status}`);
+            console.log(`[IntakeForm] Upload response: ${uploadResponse.status} ${uploadResponse.statusText}`);
 
             if (uploadResponse.ok) {
               const uploadResult = await uploadResponse.json();
-              console.log(`Upload success:`, uploadResult);
+              console.log(`[IntakeForm] Upload success:`, uploadResult);
               uploadedDocs.push({
                 id: doc.id,
                 name: doc.name,
@@ -246,9 +265,13 @@ export default function IntakeForm({
                 fileSize: uploadResult.fileSize,
               });
             } else {
-              const errorText = await uploadResponse.text();
-              console.error(`Failed to upload file: ${doc.name}`, errorText);
-              // Continue with other files, don't fail entire submission
+              let errorText = "";
+              try {
+                errorText = await uploadResponse.text();
+              } catch {
+                errorText = "Could not read error response";
+              }
+              console.error(`[IntakeForm] Upload failed for ${doc.name}:`, uploadResponse.status, errorText);
               uploadedDocs.push({
                 id: doc.id,
                 name: doc.name,
@@ -256,7 +279,7 @@ export default function IntakeForm({
               });
             }
           } catch (uploadError) {
-            console.error(`Upload error for ${doc.name}:`, uploadError);
+            console.error(`[IntakeForm] Upload exception for ${doc.name}:`, uploadError);
             uploadedDocs.push({
               id: doc.id,
               name: doc.name,
@@ -264,8 +287,9 @@ export default function IntakeForm({
             });
           }
         } else {
-          console.log(`Skipping upload for ${doc.name}: file=${!!doc.file}, uploaded=${doc.uploaded}`);
-          // Already uploaded or no file
+          if (!hasValidFile && doc.name) {
+            console.warn(`[IntakeForm] Document "${doc.name}" has no valid File object - file was likely lost`);
+          }
           uploadedDocs.push({
             id: doc.id,
             name: doc.name,
@@ -274,7 +298,7 @@ export default function IntakeForm({
         }
       }
 
-      console.log("Final uploadedDocs:", uploadedDocs);
+      console.log("[IntakeForm] Upload complete. Docs with paths:", uploadedDocs.filter(d => d.filePath).length);
 
       // Step 2: Submit the form with uploaded file paths
       const submissionData = {

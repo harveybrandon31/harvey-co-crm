@@ -23,10 +23,18 @@ export interface IntakeLinkResult {
  */
 export async function createIntakeLink(input: CreateIntakeLinkInput): Promise<IntakeLinkResult> {
   try {
+    console.log("[createIntakeLink] Starting with input:", JSON.stringify(input));
+
     const supabase = await createClient();
+    console.log("[createIntakeLink] Supabase client created");
 
     // Get the current user (preparer creating the link)
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log("[createIntakeLink] Auth result - user:", user?.id, "error:", authError?.message);
+
+    if (authError) {
+      return { success: false, error: `Authentication error: ${authError.message}` };
+    }
 
     if (!user) {
       return { success: false, error: "You must be logged in to create intake links" };
@@ -35,8 +43,10 @@ export async function createIntakeLink(input: CreateIntakeLinkInput): Promise<In
     const token = generateIntakeToken();
     const expiresAt = getExpirationDate(input.expiresInDays || 30);
 
+    console.log("[createIntakeLink] Inserting link for user:", user.id);
+
     // Insert the intake link
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("intake_links")
       .insert({
         token,
@@ -45,12 +55,16 @@ export async function createIntakeLink(input: CreateIntakeLinkInput): Promise<In
         created_by: user.id,
         prefill_first_name: input.prefillFirstName || null,
         prefill_last_name: input.prefillLastName || null,
-      });
+      })
+      .select()
+      .single();
 
     if (error) {
-      console.error("Error creating intake link:", error);
-      return { success: false, error: "Failed to create intake link" };
+      console.error("[createIntakeLink] Insert error:", error);
+      return { success: false, error: `Database error: ${error.message}` };
     }
+
+    console.log("[createIntakeLink] Link created:", data?.id);
 
     const url = generateIntakeUrl(token);
 
@@ -58,8 +72,9 @@ export async function createIntakeLink(input: CreateIntakeLinkInput): Promise<In
 
     return { success: true, url, token };
   } catch (error) {
-    console.error("Error creating intake link:", error);
-    return { success: false, error: "An unexpected error occurred" };
+    console.error("[createIntakeLink] Unexpected error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: `Unexpected error: ${message}` };
   }
 }
 

@@ -30,16 +30,25 @@ export default function DocumentsStep({
     const files = e.target.files;
     if (!files) return;
 
-    const newDocs = Array.from(files).map((file) => ({
-      id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: file.name,
-      category,
-      file,
-      uploaded: false,
-    }));
+    console.log(`[DocumentsStep] Files selected: ${files.length} files in category "${category}"`);
+
+    const newDocs = Array.from(files).map((file) => {
+      console.log(`[DocumentsStep] Creating doc for file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+      return {
+        id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        category,
+        file,
+        uploaded: false,
+      };
+    });
+
+    const updatedDocs = [...formData.uploadedDocuments, ...newDocs];
+    console.log(`[DocumentsStep] Updating formData with ${updatedDocs.length} total documents`);
+    console.log(`[DocumentsStep] Documents with File objects: ${updatedDocs.filter(d => d.file instanceof File).length}`);
 
     updateFormData({
-      uploadedDocuments: [...formData.uploadedDocuments, ...newDocs],
+      uploadedDocuments: updatedDocs,
     });
 
     // Reset the input
