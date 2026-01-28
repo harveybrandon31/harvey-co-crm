@@ -246,8 +246,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Save uploaded documents
-    if (formData.uploadedDocuments.length > 0) {
+    console.log("=== DOCUMENT UPLOAD DEBUG START ===");
+    console.log("formData.uploadedDocuments count:", formData.uploadedDocuments?.length || 0);
+    console.log("formData.uploadedDocuments RAW:", JSON.stringify(formData.uploadedDocuments, null, 2));
+
+    if (formData.uploadedDocuments && formData.uploadedDocuments.length > 0) {
+      // Log each document's keys to debug property names
+      formData.uploadedDocuments.forEach((doc, index) => {
+        console.log(`Document ${index} keys:`, Object.keys(doc));
+        console.log(`Document ${index} filePath value:`, doc.filePath);
+        console.log(`Document ${index} full object:`, JSON.stringify(doc));
+      });
+
       const docsWithPaths = formData.uploadedDocuments.filter(doc => doc.filePath);
+      console.log("docsWithPaths (filtered) count:", docsWithPaths.length);
+      console.log("docsWithPaths (filtered) RAW:", JSON.stringify(docsWithPaths, null, 2));
 
       if (docsWithPaths.length > 0) {
         const documentsData = docsWithPaths.map((doc) => ({
@@ -260,7 +273,7 @@ export async function POST(request: NextRequest) {
           tax_year: new Date().getFullYear(),
         }));
 
-        console.log("Attempting to save documents:", JSON.stringify(documentsData, null, 2));
+        console.log("documentsData (for insert):", JSON.stringify(documentsData, null, 2));
 
         const { data: docData, error: docError } = await supabase
           .from("documents")
@@ -268,14 +281,24 @@ export async function POST(request: NextRequest) {
           .select();
 
         if (docError) {
-          console.error("Error saving documents:", docError);
+          console.error("=== DOCUMENT INSERT ERROR ===");
+          console.error("Error object:", JSON.stringify(docError, null, 2));
+          console.error("Error message:", docError.message);
+          console.error("Error details:", docError.details);
+          console.error("Error hint:", docError.hint);
           console.error("Documents data attempted:", JSON.stringify(documentsData));
-          // Don't fail submission for document errors, just log
         } else {
+          console.log("=== DOCUMENT INSERT SUCCESS ===");
           console.log("Successfully saved documents:", docData?.length, "records");
+          console.log("Saved document IDs:", docData?.map(d => d.id));
         }
+      } else {
+        console.log("No documents with filePath found after filtering");
       }
+    } else {
+      console.log("No uploaded documents in formData");
     }
+    console.log("=== DOCUMENT UPLOAD DEBUG END ===");
 
     // Save intake responses
     const taxYear = new Date().getFullYear();
