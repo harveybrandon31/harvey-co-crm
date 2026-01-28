@@ -410,9 +410,21 @@ export default async function ClientDetailPage({
                           </p>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-400">
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        {doc.file_path && (
+                          <a
+                            href={doc.file_path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            View
+                          </a>
+                        )}
+                        <span className="text-xs text-gray-400">
+                          {new Date(doc.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
                   </li>
                 ))}
