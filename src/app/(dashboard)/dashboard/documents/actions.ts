@@ -30,7 +30,7 @@ export async function uploadDocument(formData: FormData) {
 
   // Upload file to Supabase Storage
   const { error: uploadError } = await supabase.storage
-    .from("documents")
+    .from("client-documents")
     .upload(fileName, file);
 
   if (uploadError) {
@@ -50,11 +50,11 @@ export async function uploadDocument(formData: FormData) {
     user_id: user.id,
   };
 
-  const { error: dbError } = await supabase.from("documents").insert(documentData);
+  const { error: dbError } = await supabase.from("client-documents").insert(documentData);
 
   if (dbError) {
     // Clean up uploaded file if database insert fails
-    await supabase.storage.from("documents").remove([fileName]);
+    await supabase.storage.from("client-documents").remove([fileName]);
     return { error: dbError.message };
   }
 
@@ -76,7 +76,7 @@ export async function deleteDocument(id: string) {
 
   // Get document to find file path
   const { data: document } = await supabase
-    .from("documents")
+    .from("client-documents")
     .select("file_path")
     .eq("id", id)
     .eq("user_id", user.id)
@@ -87,11 +87,11 @@ export async function deleteDocument(id: string) {
   }
 
   // Delete from storage
-  await supabase.storage.from("documents").remove([document.file_path]);
+  await supabase.storage.from("client-documents").remove([document.file_path]);
 
   // Delete from database
   const { error } = await supabase
-    .from("documents")
+    .from("client-documents")
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);
@@ -108,7 +108,7 @@ export async function getDocumentUrl(filePath: string) {
   const supabase = await createClient();
 
   const { data } = await supabase.storage
-    .from("documents")
+    .from("client-documents")
     .createSignedUrl(filePath, 3600); // 1 hour expiry
 
   return data?.signedUrl || null;
