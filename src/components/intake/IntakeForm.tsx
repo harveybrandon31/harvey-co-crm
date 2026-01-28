@@ -208,6 +208,10 @@ export default function IntakeForm({
       }
 
       // Documents are already uploaded when selected, just map the data
+      console.log("=== INTAKE FORM SUBMISSION - DOCUMENTS DEBUG ===");
+      console.log("[IntakeForm] formData.uploadedDocuments RAW:", JSON.stringify(formData.uploadedDocuments, null, 2));
+      console.log("[IntakeForm] formData.uploadedDocuments length:", formData.uploadedDocuments.length);
+
       const uploadedDocs = formData.uploadedDocuments.map(doc => ({
         id: doc.id,
         name: doc.name,
@@ -217,10 +221,12 @@ export default function IntakeForm({
         fileSize: doc.fileSize,
       }));
 
+      console.log("[IntakeForm] Mapped uploadedDocs:", JSON.stringify(uploadedDocs, null, 2));
       console.log("[IntakeForm] Document stats:", {
         total: uploadedDocs.length,
         withPaths: uploadedDocs.filter(d => d.filePath).length,
       });
+      console.log("=== INTAKE FORM SUBMISSION - DOCUMENTS DEBUG END ===");
 
       // Submit the form data
       const submissionData = {
