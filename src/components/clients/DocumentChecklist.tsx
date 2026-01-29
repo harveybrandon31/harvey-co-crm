@@ -63,6 +63,8 @@ export default function DocumentChecklist({
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestResult, setRequestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [customItems, setCustomItems] = useState<string[]>([]);
+  const [customInput, setCustomInput] = useState("");
   // Generate document checklist based on client profile
   const generateChecklist = (): DocumentItem[] => {
     const items: DocumentItem[] = [];
@@ -155,6 +157,15 @@ export default function DocumentChecklist({
       id: "1099-div",
       name: "1099-DIV Forms (if any)",
       description: "Dividend income from investments",
+      required: false,
+      received: false,
+      category: "Income",
+    });
+
+    items.push({
+      id: "bank-statements",
+      name: "Bank Statements",
+      description: "Recent statements from all bank accounts",
       required: false,
       received: false,
       category: "Income",
@@ -425,23 +436,23 @@ export default function DocumentChecklist({
   };
 
   const handleSendDocumentRequest = async () => {
-    if (!clientEmail || selectedForRequest.size === 0) return;
+    const totalItems = selectedForRequest.size + customItems.length;
+    if (!clientEmail || totalItems === 0) return;
 
     setSendingRequest(true);
     setRequestResult(null);
 
     try {
       const selectedDocs = documents.filter((d) => selectedForRequest.has(d.id));
+      const allDocs = [
+        ...selectedDocs.map((d) => ({ name: d.name, description: d.description })),
+        ...customItems.map((name) => ({ name, description: "" })),
+      ];
 
       const response = await fetch(`/api/clients/${clientId}/send-document-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          documents: selectedDocs.map((d) => ({
-            name: d.name,
-            description: d.description,
-          })),
-        }),
+        body: JSON.stringify({ documents: allDocs }),
       });
 
       const data = await response.json();
@@ -449,13 +460,15 @@ export default function DocumentChecklist({
       if (response.ok && data.success) {
         setRequestResult({
           success: true,
-          message: `Document request sent for ${selectedDocs.length} item${selectedDocs.length > 1 ? "s" : ""}!`,
+          message: `Document request sent for ${allDocs.length} item${allDocs.length > 1 ? "s" : ""}!`,
         });
         // Close modal after success
         setTimeout(() => {
           setShowRequestModal(false);
           setSelectMode(false);
           setSelectedForRequest(new Set());
+          setCustomItems([]);
+          setCustomInput("");
           setRequestResult(null);
         }, 2000);
       } else {
@@ -686,11 +699,11 @@ export default function DocumentChecklist({
           {selectMode ? (
             <>
               <p className="text-sm text-gray-500">
-                {selectedForRequest.size} document{selectedForRequest.size !== 1 ? "s" : ""} selected
+                {selectedForRequest.size + customItems.length} document{selectedForRequest.size + customItems.length !== 1 ? "s" : ""} selected
               </p>
               <button
                 onClick={() => setShowRequestModal(true)}
-                disabled={selectedForRequest.size === 0}
+                disabled={selectedForRequest.size + customItems.length === 0}
                 className="rounded-lg bg-[#2D4A43] px-4 py-2 text-sm font-medium text-white hover:bg-[#3D5A53] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -760,6 +773,68 @@ export default function DocumentChecklist({
                     </div>
                   </div>
                 ))}
+            </div>
+
+            {/* Custom Document Items */}
+            {customItems.length > 0 && (
+              <div className="bg-blue-50 rounded-lg border border-blue-200 divide-y divide-blue-200 mb-4">
+                <div className="px-4 py-2">
+                  <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Custom Items</p>
+                </div>
+                {customItems.map((name, idx) => (
+                  <div key={idx} className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <span className="text-[#C9A962] mt-0.5">&#9744;</span>
+                      <p className="text-sm font-medium text-gray-900">{name}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCustomItems((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Custom Document */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Add custom document
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && customInput.trim()) {
+                      e.preventDefault();
+                      setCustomItems((prev) => [...prev, customInput.trim()]);
+                      setCustomInput("");
+                    }
+                  }}
+                  placeholder="e.g. Profit & Loss Statement"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D4A43] focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customInput.trim()) {
+                      setCustomItems((prev) => [...prev, customInput.trim()]);
+                      setCustomInput("");
+                    }
+                  }}
+                  disabled={!customInput.trim()}
+                  className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add
+                </button>
+              </div>
             </div>
 
             {/* Result Message */}

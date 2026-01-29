@@ -141,7 +141,7 @@ export default function DocumentUploadPage({ token }: { token: string }) {
         </h1>
         <p className="mt-2 text-gray-600">
           Please upload the documents listed below. Accepted formats: PDF, JPG,
-          PNG, HEIC (max 10 MB each).
+          PNG, HEIC (max 25 MB each).
         </p>
       </div>
 
