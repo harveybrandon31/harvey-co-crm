@@ -900,7 +900,8 @@ export interface DocumentRequestItem {
 
 export function generateDocumentRequestEmail(
   clientFirstName: string,
-  documents: DocumentRequestItem[]
+  documents: DocumentRequestItem[],
+  uploadUrl?: string
 ): { subject: string; html: string; text: string } {
   const subject = "Documents Needed for Your Tax Return - Harvey & Co";
 
@@ -942,12 +943,24 @@ export function generateDocumentRequestEmail(
       </table>
     </div>
 
+    ${uploadUrl ? `
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${uploadUrl}"
+         style="display: inline-block; background: #059669; color: white; padding: 18px 40px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);">
+        Upload Your Documents &rarr;
+      </a>
+    </div>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #6B7280; text-align: center;">
+      Use the secure link above to upload each document. You can also reply to this email with photos or scans.
+    </p>
+    ` : `
     <div style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 16px; margin: 24px 0;">
       <p style="margin: 0; font-size: 14px; color: #92400E;">
         <strong>Tip:</strong> You can reply to this email with photos or scans of your documents,
         or upload them through our secure portal. Clear, readable images work best!
       </p>
     </div>
+    `}
 
     <p style="margin: 24px 0; font-size: 16px; color: #4B5563; line-height: 1.7;">
       If you have any questions about what's needed or where to find these documents,
@@ -975,7 +988,7 @@ We're making great progress on your tax return! To complete your filing, we'll n
 DOCUMENTS NEEDED (${documents.length}):
 ${documentListText}
 
-TIP: You can reply to this email with photos or scans of your documents, or upload them through our secure portal. Clear, readable images work best!
+${uploadUrl ? `UPLOAD YOUR DOCUMENTS:\n${uploadUrl}\n\nUse the secure link above to upload each document. You can also reply to this email with photos or scans.` : `TIP: You can reply to this email with photos or scans of your documents, or upload them through our secure portal. Clear, readable images work best!`}
 
 If you have any questions about what's needed or where to find these documents, don't hesitate to reach out. I'm happy to help!
 
