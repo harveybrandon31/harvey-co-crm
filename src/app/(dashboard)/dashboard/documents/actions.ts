@@ -43,7 +43,7 @@ export async function uploadDocument(formData: FormData) {
     tax_return_id: taxReturnId,
     name: file.name,
     file_path: fileName,
-    file_type: file.type,
+    mime_type: file.type,
     file_size: file.size,
     category: category,
     uploaded_by: user.id,

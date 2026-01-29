@@ -198,20 +198,13 @@ export default function IntakeForm({
       const isDemoMode = token === "demo" || linkId === "demo-link-id" ||
         token.startsWith("demo-token-") || linkId.startsWith("demo-");
 
-      console.log("[IntakeForm] Submit started - token:", token, "linkId:", linkId, "isDemoMode:", isDemoMode);
-
       if (isDemoMode) {
-        // Simulate a brief delay
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setSubmitted(true);
         return;
       }
 
-      // Documents are already uploaded when selected, just map the data
-      console.log("=== INTAKE FORM SUBMISSION - DOCUMENTS DEBUG ===");
-      console.log("[IntakeForm] formData.uploadedDocuments RAW:", JSON.stringify(formData.uploadedDocuments, null, 2));
-      console.log("[IntakeForm] formData.uploadedDocuments length:", formData.uploadedDocuments.length);
-
+      // Documents are already uploaded to Uploadcare, just map the metadata
       const uploadedDocs = formData.uploadedDocuments.map(doc => ({
         id: doc.id,
         name: doc.name,
@@ -221,27 +214,10 @@ export default function IntakeForm({
         fileSize: doc.fileSize,
       }));
 
-      console.log("[IntakeForm] Mapped uploadedDocs:", JSON.stringify(uploadedDocs, null, 2));
-      console.log("[IntakeForm] Document stats:", {
-        total: uploadedDocs.length,
-        withPaths: uploadedDocs.filter(d => d.filePath).length,
-      });
-      console.log("=== INTAKE FORM SUBMISSION - DOCUMENTS DEBUG END ===");
-
-      // Submit the form data
       const submissionData = {
         ...formData,
         uploadedDocuments: uploadedDocs,
       };
-
-      console.log("[IntakeForm] Submitting form data:", {
-        dependents: formData.dependents.length,
-        hasSpouse: formData.hasSpouse,
-        spouseFirstName: formData.spouseFirstName,
-        spouseLastName: formData.spouseLastName,
-        spouseDob: formData.spouseDob,
-        documents: uploadedDocs.length,
-      });
 
       const response = await fetch("/api/intake/submit", {
         method: "POST",

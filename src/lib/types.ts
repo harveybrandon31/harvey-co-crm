@@ -79,15 +79,18 @@ export interface TaxReturn {
 export interface Document {
   id: string;
   created_at: string;
+  updated_at: string;
   client_id: string;
   tax_return_id: string | null;
   name: string;
   file_path: string;
-  file_type: string | null;
+  mime_type: string | null;
   file_size: number | null;
   category: DocumentCategory | null;
   uploaded_by: string | null;
-  user_id: string;
+  user_id: string | null;
+  tax_year: number | null;
+  notes: string | null;
 }
 
 export interface ActivityLog {

@@ -10,7 +10,7 @@ interface DocumentWithRelations {
   created_at: string;
   name: string;
   file_path: string;
-  file_type: string | null;
+  mime_type: string | null;
   file_size: number | null;
   category: string | null;
   clients: {

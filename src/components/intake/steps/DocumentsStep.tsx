@@ -34,11 +34,6 @@ export default function DocumentsStep({
 }: DocumentsStepProps) {
 
   const handleUploadComplete = (fileInfo: UploadcareFileInfo, category: string) => {
-    console.log("=== UPLOADCARE UPLOAD COMPLETE ===");
-    console.log("[DocumentsStep] Raw fileInfo from Uploadcare:", JSON.stringify(fileInfo, null, 2));
-    console.log("[DocumentsStep] fileInfo.cdnUrl:", fileInfo.cdnUrl);
-    console.log("[DocumentsStep] fileInfo.uuid:", fileInfo.uuid);
-
     const newDoc = {
       id: fileInfo.uuid,
       name: fileInfo.name || "Uploaded file",
@@ -49,18 +44,9 @@ export default function DocumentsStep({
       fileSize: fileInfo.size,
     };
 
-    console.log("[DocumentsStep] New document object created:", JSON.stringify(newDoc, null, 2));
-    console.log("[DocumentsStep] Current uploadedDocuments count:", formData.uploadedDocuments.length);
-
-    const updatedDocs = [...formData.uploadedDocuments, newDoc];
-    console.log("[DocumentsStep] Updated uploadedDocuments array:", JSON.stringify(updatedDocs, null, 2));
-
     updateFormData({
-      uploadedDocuments: updatedDocs,
+      uploadedDocuments: [...formData.uploadedDocuments, newDoc],
     });
-
-    console.log("[DocumentsStep] updateFormData called with", updatedDocs.length, "documents");
-    console.log("=== UPLOADCARE UPLOAD COMPLETE END ===");
   };
 
   const removeDocument = (docId: string) => {
