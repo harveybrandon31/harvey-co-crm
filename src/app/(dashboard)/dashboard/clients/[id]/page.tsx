@@ -128,7 +128,13 @@ export default async function ClientDetailPage({
 
     tasks = tasksData;
 
-    const { data: documentsData } = await supabase
+    // Use admin client for documents to bypass RLS - intake-uploaded
+    // documents may have user_id=NULL and wouldn't be visible via the
+    // session-based client's RLS policy (auth.uid() = user_id).
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminSupabase = createAdminClient();
+
+    const { data: documentsData } = await adminSupabase
       .from("documents")
       .select("*")
       .eq("client_id", id)

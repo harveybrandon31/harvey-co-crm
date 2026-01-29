@@ -258,6 +258,7 @@ export async function POST(request: NextRequest) {
           file_size: doc.fileSize || null,
           category: doc.category || "other",
           tax_year: new Date().getFullYear(),
+          ...(userId ? { user_id: userId } : {}),
         }));
 
         console.log("Saving", documentsData.length, "documents for client", clientId);

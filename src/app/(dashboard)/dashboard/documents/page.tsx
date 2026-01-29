@@ -78,8 +78,13 @@ export default async function DocumentsPage({
       .order("last_name", { ascending: true });
     clients = (clientsData as Client[]) || [];
 
-    // Get documents with filters
-    let query = supabase
+    // Use admin client for documents to bypass RLS - intake-uploaded
+    // documents may have user_id=NULL and wouldn't be visible via the
+    // session-based client's RLS policy (auth.uid() = user_id).
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const adminSupabase = createAdminClient();
+
+    let query = adminSupabase
       .from("documents")
       .select("*, clients(id, first_name, last_name), tax_returns(id, tax_year, return_type)")
       .order("created_at", { ascending: false });
