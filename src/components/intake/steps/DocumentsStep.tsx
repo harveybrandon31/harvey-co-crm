@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef, useState } from "react";
+import { uploadFile } from "@uploadcare/upload-client";
 import { IntakeFormData } from "../IntakeForm";
 
 interface DocumentsStepProps {
@@ -19,8 +20,7 @@ const DOCUMENT_CATEGORIES = [
   { id: "other", label: "Other Documents", description: "Any other relevant documents" },
 ];
 
-// Uploadcare file info type
-interface UploadcareFileInfo {
+interface UploadedFileInfo {
   uuid: string;
   name: string;
   size: number;
@@ -33,7 +33,7 @@ export default function DocumentsStep({
   updateFormData,
 }: DocumentsStepProps) {
 
-  const handleUploadComplete = (fileInfo: UploadcareFileInfo, category: string) => {
+  const handleUploadComplete = (fileInfo: UploadedFileInfo, category: string) => {
     const newDoc = {
       id: fileInfo.uuid,
       name: fileInfo.name || "Uploaded file",
@@ -262,66 +262,65 @@ export default function DocumentsStep({
   );
 }
 
-// Upload button component that uses Uploadcare
+// Upload button using @uploadcare/upload-client (native JS, no jQuery)
 interface UploadButtonProps {
   category: string;
-  onUpload: (fileInfo: UploadcareFileInfo, category: string) => void;
+  onUpload: (fileInfo: UploadedFileInfo, category: string) => void;
   variant: "white" | "outline";
   multiple?: boolean;
 }
 
 function UploadButton({ category, onUpload, variant, multiple = false }: UploadButtonProps) {
-  const widgetRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    // Dynamically load Uploadcare widget script
-    const existingScript = document.querySelector('script[src*="uploadcare"]');
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.src = "https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-  const handleClick = () => {
-    // Check if uploadcare is loaded
-    const uploadcare = (window as unknown as { uploadcare?: {
-      openDialog: (
-        input: HTMLInputElement | null,
-        options: Record<string, unknown>
-      ) => { done: (callback: (file: { promise: () => Promise<UploadcareFileInfo> }) => void) => void };
-    } }).uploadcare;
+    setUploading(true);
 
-    if (!uploadcare) {
-      console.error("Uploadcare not loaded yet");
-      return;
-    }
+    try {
+      for (const file of Array.from(files)) {
+        // Validate file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+          continue;
+        }
 
-    const dialog = uploadcare.openDialog(null, {
-      publicKey: UPLOADCARE_PUBLIC_KEY,
-      multiple: multiple,
-      imagesOnly: false,
-      tabs: "file camera",
-      preferredTypes: "image/* application/pdf",
-    });
+        // Validate file type
+        const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/heic"];
+        if (!allowedTypes.includes(file.type)) {
+          alert(`File "${file.name}" is not a supported format. Please use PDF, JPG, or PNG.`);
+          continue;
+        }
 
-    dialog.done((result) => {
-      if (multiple) {
-        // Handle multiple files
-        const files = result as unknown as { files: () => Array<{ promise: () => Promise<UploadcareFileInfo> }> };
-        files.files().forEach((file) => {
-          file.promise().then((fileInfo) => {
-            onUpload(fileInfo, category);
-          });
+        const result = await uploadFile(file, {
+          publicKey: UPLOADCARE_PUBLIC_KEY,
+          store: "auto",
         });
-      } else {
-        // Handle single file
-        result.promise().then((fileInfo) => {
-          onUpload(fileInfo, category);
-        });
+
+        onUpload(
+          {
+            uuid: result.uuid,
+            name: result.originalFilename || file.name,
+            size: result.size,
+            cdnUrl: result.cdnUrl,
+            mimeType: result.mimeType || file.type,
+          },
+          category
+        );
       }
-    });
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+      // Reset input so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const baseClasses = "cursor-pointer inline-flex items-center text-sm font-medium rounded-lg transition-all";
@@ -331,13 +330,29 @@ function UploadButton({ category, onUpload, variant, multiple = false }: UploadB
 
   return (
     <>
-      <input type="hidden" ref={widgetRef} />
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        accept=".pdf,.jpg,.jpeg,.png,.heic"
+        multiple={multiple}
+        className="hidden"
+      />
       <button
         type="button"
-        onClick={handleClick}
-        className={`${baseClasses} ${variantClasses}`}
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className={`${baseClasses} ${variantClasses} ${uploading ? "opacity-50 cursor-wait" : ""}`}
       >
-        {variant === "white" ? (
+        {uploading ? (
+          <>
+            <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Uploading...
+          </>
+        ) : variant === "white" ? (
           <>
             <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
