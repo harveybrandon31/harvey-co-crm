@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { uploadFile } from "@uploadcare/upload-client";
 import { IntakeFormData } from "../IntakeForm";
 
 interface DocumentsStepProps {
@@ -9,8 +8,6 @@ interface DocumentsStepProps {
   updateFormData: (updates: Partial<IntakeFormData>) => void;
   token: string;
 }
-
-const UPLOADCARE_PUBLIC_KEY = "67c482e9a427ffb15d57";
 
 const DOCUMENT_CATEGORIES = [
   { id: "w2", label: "W-2 Forms", description: "Wage and tax statements from employers" },
@@ -295,18 +292,31 @@ function UploadButton({ category, onUpload, variant, multiple = false }: UploadB
           continue;
         }
 
-        const result = await uploadFile(file, {
-          publicKey: UPLOADCARE_PUBLIC_KEY,
-          store: "auto",
+        const tempId = crypto.randomUUID();
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("category", category);
+        formData.append("tempId", tempId);
+
+        const response = await fetch("/api/intake/upload", {
+          method: "POST",
+          body: formData,
         });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Upload failed");
+        }
+
+        const result = await response.json();
 
         onUpload(
           {
-            uuid: result.uuid,
-            name: result.originalFilename || file.name,
-            size: result.size,
-            cdnUrl: result.cdnUrl,
-            mimeType: result.mimeType || file.type,
+            uuid: tempId,
+            name: result.fileName || file.name,
+            size: result.fileSize || file.size,
+            cdnUrl: result.filePath,
+            mimeType: result.fileType || file.type,
           },
           category
         );

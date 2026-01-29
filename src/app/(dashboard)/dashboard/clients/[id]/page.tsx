@@ -51,6 +51,7 @@ export default async function ClientDetailPage({
   let dependents: Dependent[] | null = null;
   let tasks: Task[] | null = null;
   let documents: Document[] | null = null;
+  const documentUrls: Record<string, string> = {};
   let intakeLinks: IntakeLink[] | null = null;
   let intakeResponses: IntakeResponse[] | null = null;
 
@@ -141,6 +142,28 @@ export default async function ClientDetailPage({
       .order("created_at", { ascending: false });
 
     documents = documentsData;
+
+    // Generate signed URLs for documents stored in Supabase Storage
+    if (documents) {
+      for (const doc of documents) {
+        if (doc.file_path?.startsWith("http")) {
+          documentUrls[doc.id] = doc.file_path;
+        }
+      }
+      const storageDocs = documents.filter(d => d.file_path && !d.file_path.startsWith("http"));
+      if (storageDocs.length > 0) {
+        const { data: signedUrls } = await adminSupabase.storage
+          .from("client-documents")
+          .createSignedUrls(storageDocs.map(d => d.file_path), 3600);
+        if (signedUrls) {
+          storageDocs.forEach((doc, i) => {
+            if (signedUrls[i]?.signedUrl) {
+              documentUrls[doc.id] = signedUrls[i].signedUrl;
+            }
+          });
+        }
+      }
+    }
 
     const { data: linksData } = await supabase
       .from("intake_links")
@@ -417,9 +440,9 @@ export default async function ClientDetailPage({
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {doc.file_path && (
+                        {documentUrls[doc.id] && (
                           <a
-                            href={doc.file_path}
+                            href={documentUrls[doc.id]}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:text-blue-700"

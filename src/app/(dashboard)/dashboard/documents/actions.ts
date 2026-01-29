@@ -105,9 +105,17 @@ export async function deleteDocument(id: string) {
 }
 
 export async function getDocumentUrl(filePath: string) {
-  const supabase = await createClient();
+  // Legacy Uploadcare CDN URLs are full URLs starting with http
+  if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+    return filePath;
+  }
 
-  const { data } = await supabase.storage
+  // Supabase Storage paths - use admin client to bypass storage RLS
+  // (intake-uploaded files have no user association)
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminSupabase = createAdminClient();
+
+  const { data } = await adminSupabase.storage
     .from("client-documents")
     .createSignedUrl(filePath, 3600); // 1 hour expiry
 
