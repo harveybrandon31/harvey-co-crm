@@ -693,6 +693,81 @@ export default function DocumentChecklist({
         })}
       </div>
 
+      {/* Custom Documents Section (visible in select mode) */}
+      {selectMode && (
+        <div className="px-6 py-4 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+              Custom Items
+            </h4>
+            {customItems.length > 0 && (
+              <span className="text-xs text-gray-500">{customItems.length} added</span>
+            )}
+          </div>
+
+          {/* Added custom items */}
+          {customItems.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {customItems.map((name, idx) => (
+                <div key={idx} className="flex items-center gap-2 pl-2">
+                  <div className="mt-0 h-5 w-5 rounded border-2 bg-[#2D4A43] border-[#2D4A43] flex items-center justify-center flex-shrink-0">
+                    <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 flex items-center gap-3 p-3 rounded-lg bg-blue-50 border-2 border-blue-200">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900">{name}</span>
+                      <p className="text-xs mt-0.5 text-blue-600">Custom request</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCustomItems((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Input to add custom items */}
+          <div className="flex gap-2 pl-9">
+            <input
+              type="text"
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && customInput.trim()) {
+                  e.preventDefault();
+                  setCustomItems((prev) => [...prev, customInput.trim()]);
+                  setCustomInput("");
+                }
+              }}
+              placeholder="Type a document name and press Enter"
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D4A43] focus:border-transparent"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (customInput.trim()) {
+                  setCustomItems((prev) => [...prev, customInput.trim()]);
+                  setCustomInput("");
+                }
+              }}
+              disabled={!customInput.trim()}
+              className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
         <div className="flex items-center justify-between">
@@ -775,67 +850,20 @@ export default function DocumentChecklist({
                 ))}
             </div>
 
-            {/* Custom Document Items */}
+            {/* Custom items in summary */}
             {customItems.length > 0 && (
               <div className="bg-blue-50 rounded-lg border border-blue-200 divide-y divide-blue-200 mb-4">
                 <div className="px-4 py-2">
                   <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Custom Items</p>
                 </div>
                 {customItems.map((name, idx) => (
-                  <div key={idx} className="px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-start gap-3">
-                      <span className="text-[#C9A962] mt-0.5">&#9744;</span>
-                      <p className="text-sm font-medium text-gray-900">{name}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCustomItems((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                  <div key={idx} className="px-4 py-3 flex items-start gap-3">
+                    <span className="text-[#C9A962] mt-0.5">&#9744;</span>
+                    <p className="text-sm font-medium text-gray-900">{name}</p>
                   </div>
                 ))}
               </div>
             )}
-
-            {/* Add Custom Document */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Add custom document
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customInput}
-                  onChange={(e) => setCustomInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && customInput.trim()) {
-                      e.preventDefault();
-                      setCustomItems((prev) => [...prev, customInput.trim()]);
-                      setCustomInput("");
-                    }
-                  }}
-                  placeholder="e.g. Profit & Loss Statement"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D4A43] focus:border-transparent"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (customInput.trim()) {
-                      setCustomItems((prev) => [...prev, customInput.trim()]);
-                      setCustomInput("");
-                    }
-                  }}
-                  disabled={!customInput.trim()}
-                  className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
 
             {/* Result Message */}
             {requestResult && (
