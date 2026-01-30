@@ -50,7 +50,7 @@ export async function uploadDocument(formData: FormData) {
     user_id: user.id,
   };
 
-  const { error: dbError } = await supabase.from("client-documents").insert(documentData);
+  const { error: dbError } = await supabase.from("documents").insert(documentData);
 
   if (dbError) {
     // Clean up uploaded file if database insert fails
@@ -76,7 +76,7 @@ export async function deleteDocument(id: string) {
 
   // Get document to find file path
   const { data: document } = await supabase
-    .from("client-documents")
+    .from("documents")
     .select("file_path")
     .eq("id", id)
     .eq("user_id", user.id)
@@ -91,7 +91,7 @@ export async function deleteDocument(id: string) {
 
   // Delete from database
   const { error } = await supabase
-    .from("client-documents")
+    .from("documents")
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);
