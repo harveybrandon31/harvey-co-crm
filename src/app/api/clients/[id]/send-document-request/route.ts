@@ -5,6 +5,7 @@ import { generateDocumentRequestEmail } from "@/lib/email/templates";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { headers } from "next/headers";
+import { sendSMS, isValidPhoneNumber } from "@/lib/sms/twilio";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -20,7 +21,11 @@ export async function POST(
   try {
     const { id: clientId } = await params;
     const body = await request.json();
-    const { documents } = body as { documents: DocumentItem[] };
+    const { documents, sendViaSMS, clientPhone } = body as {
+      documents: DocumentItem[];
+      sendViaSMS?: boolean;
+      clientPhone?: string;
+    };
 
     if (!documents || documents.length === 0) {
       return NextResponse.json(
@@ -146,10 +151,11 @@ export async function POST(
       );
     }
 
-    // Log activity
+    // Log email activity
     await supabase.from("activity_log").insert({
       client_id: clientId,
-      activity_type: "email_sent",
+      user_id: user?.id,
+      action: "email_sent",
       description: `Document request email sent (${documents.length} documents)`,
       metadata: {
         email_type: "document_request",
@@ -160,11 +166,37 @@ export async function POST(
       },
     });
 
+    // Send SMS if requested
+    let smsSentOk = false;
+    if (sendViaSMS && clientPhone && isValidPhoneNumber(clientPhone)) {
+      const docNames = documents.map((d) => d.name).join(", ");
+      const smsBody = `Hi ${client.first_name}! Brandon here from Harvey & Co. We need a few documents from you: ${docNames}. Please upload them here: ${uploadUrl} - Reply if you have questions!`;
+
+      const smsResult = await sendSMS({ to: clientPhone, body: smsBody });
+      smsSentOk = smsResult.success;
+
+      if (smsResult.success) {
+        await supabase.from("activity_log").insert({
+          client_id: clientId,
+          user_id: user?.id,
+          action: "sms_sent",
+          description: `Document request SMS sent to ${clientPhone}`,
+          metadata: {
+            messageId: smsResult.messageId,
+            templateId: "document_request",
+            messagePreview: smsBody.substring(0, 100),
+            document_request_id: docRequest.id,
+          },
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Document request sent to ${client.email}`,
+      message: `Document request sent to ${client.email}${smsSentOk ? " and via SMS" : ""}`,
       documentsRequested: documents.length,
       uploadUrl,
+      smsSent: smsSentOk,
     });
   } catch (error) {
     console.error("Error in document request API:", error);

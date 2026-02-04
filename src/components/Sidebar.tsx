@@ -14,6 +14,11 @@ const pipelineSubItems = [
   { key: "accepted", label: "Accepted" },
 ];
 
+const marketingSubItems = [
+  { key: "", label: "Dashboard", href: "/dashboard/marketing" },
+  { key: "campaigns", label: "Campaigns", href: "/dashboard/marketing/campaigns" },
+];
+
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { name: "Clients", href: "/dashboard/clients", icon: UsersIcon },
@@ -23,7 +28,6 @@ const navigation = [
   { name: "Invoices", href: "/dashboard/invoices", icon: InvoiceIcon },
   { name: "Documents", href: "/dashboard/documents", icon: FolderIcon },
   { name: "Reports", href: "/dashboard/reports", icon: ReportsIcon },
-  { name: "Marketing", href: "/dashboard/marketing", icon: MegaphoneIcon },
   { name: "Settings", href: "/dashboard/settings", icon: SettingsIcon },
 ];
 
@@ -133,7 +137,9 @@ function ChevronIcon({ className, expanded }: { className?: string; expanded: bo
 export default function Sidebar() {
   const pathname = usePathname();
   const isPipelinePage = pathname.startsWith("/dashboard/pipeline");
+  const isMarketingPage = pathname.startsWith("/dashboard/marketing");
   const [pipelineOpen, setPipelineOpen] = useState(isPipelinePage);
+  const [marketingOpen, setMarketingOpen] = useState(isMarketingPage);
 
   return (
     <div className="flex h-full w-64 flex-col bg-[#2D4A43]">
@@ -220,8 +226,68 @@ export default function Sidebar() {
             )}
           </li>
 
-          {/* Remaining navigation items */}
-          {navigation.slice(1).map((item) => {
+          {/* Navigation items before Marketing */}
+          {navigation.slice(1, -1).map((item) => {
+            const isActive = pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            return (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  className={`group flex gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-white/15 text-white shadow-sm"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {item.name}
+                </Link>
+              </li>
+            );
+          })}
+
+          {/* Marketing collapsible section */}
+          <li>
+            <button
+              onClick={() => setMarketingOpen(!marketingOpen)}
+              className={`w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                isMarketingPage
+                  ? "bg-white/15 text-white shadow-sm"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <MegaphoneIcon className="h-5 w-5 shrink-0" />
+              <span className="flex-1 text-left">Marketing</span>
+              <ChevronIcon className="h-3.5 w-3.5 shrink-0" expanded={marketingOpen} />
+            </button>
+
+            {marketingOpen && (
+              <ul className="mt-1 ml-5 space-y-0.5">
+                {marketingSubItems.map((sub) => {
+                  const isSubActive = pathname === sub.href ||
+                    (sub.key === "campaigns" && pathname.startsWith("/dashboard/marketing/campaigns"));
+                  return (
+                    <li key={sub.key || "dashboard"}>
+                      <Link
+                        href={sub.href}
+                        className={`block rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                          isSubActive
+                            ? "bg-white/10 text-white"
+                            : "text-white/50 hover:bg-white/5 hover:text-white/80"
+                        }`}
+                      >
+                        {sub.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </li>
+
+          {/* Settings (last nav item) */}
+          {navigation.slice(-1).map((item) => {
             const isActive = pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (

@@ -16,6 +16,7 @@ interface DocumentChecklistProps {
   clientId: string;
   clientName: string;
   clientEmail?: string | null;
+  clientPhone?: string | null;
   hasW2Income?: boolean;
   w2Count?: number;
   has1099Income?: boolean;
@@ -39,6 +40,7 @@ export default function DocumentChecklist({
   clientId,
   clientName,
   clientEmail,
+  clientPhone,
   hasW2Income = false,
   w2Count = 1,
   has1099Income = false,
@@ -65,6 +67,7 @@ export default function DocumentChecklist({
   const [requestResult, setRequestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [customItems, setCustomItems] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState("");
+  const [alsoSendSMS, setAlsoSendSMS] = useState(false);
   // Generate document checklist based on client profile
   const generateChecklist = (): DocumentItem[] => {
     const items: DocumentItem[] = [];
@@ -452,7 +455,11 @@ export default function DocumentChecklist({
       const response = await fetch(`/api/clients/${clientId}/send-document-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documents: allDocs }),
+        body: JSON.stringify({
+          documents: allDocs,
+          sendViaSMS: alsoSendSMS && !!clientPhone,
+          clientPhone: alsoSendSMS ? clientPhone : undefined,
+        }),
       });
 
       const data = await response.json();
@@ -863,6 +870,24 @@ export default function DocumentChecklist({
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Also Send via SMS Toggle */}
+            {clientPhone && (
+              <label className="flex items-center gap-3 mb-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={alsoSendSMS}
+                  onChange={(e) => setAlsoSendSMS(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700">Also send via SMS to {clientPhone}</span>
+                </div>
+              </label>
             )}
 
             {/* Result Message */}

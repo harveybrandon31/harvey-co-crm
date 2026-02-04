@@ -11,6 +11,7 @@ import SendSMSButton from "@/components/clients/SendSMSButton";
 import IntakeAnswers from "@/components/clients/IntakeAnswers";
 import RevealSSN from "@/components/clients/RevealSSN";
 import StartProcessingButton from "@/components/pipeline/StartProcessingButton";
+import SMSHistory from "@/components/clients/SMSHistory";
 
 interface IntakeResponse {
   question_key: string;
@@ -55,6 +56,7 @@ export default async function ClientDetailPage({
   const documentUrls: Record<string, string> = {};
   let intakeLinks: IntakeLink[] | null = null;
   let intakeResponses: IntakeResponse[] | null = null;
+  let smsHistory: { id: string; created_at: string; description: string; metadata: Record<string, unknown> | null }[] = [];
 
   if (DEMO_MODE) {
     client = mockClients.find((c) => c.id === id) || null;
@@ -181,6 +183,17 @@ export default async function ClientDetailPage({
       .eq("client_id", id);
 
     intakeResponses = responsesData;
+
+    // Fetch SMS history
+    const { data: smsData } = await supabase
+      .from("activity_log")
+      .select("id, created_at, description, metadata")
+      .eq("client_id", id)
+      .eq("action", "sms_sent")
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    smsHistory = smsData || [];
   }
 
   if (!client) {
@@ -485,6 +498,7 @@ export default async function ClientDetailPage({
             clientId={id}
             clientName={`${client.first_name} ${client.last_name}`}
             clientEmail={client.email}
+            clientPhone={client.phone}
             hasW2Income={getIntakeAnswer(intakeResponses, "has_w2_income", client.status === "active")}
             w2Count={getIntakeAnswer(intakeResponses, "w2_employer_count", 1)}
             has1099Income={getIntakeAnswer(intakeResponses, "has_1099_income", false)}
@@ -603,6 +617,14 @@ export default async function ClientDetailPage({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* SMS History */}
+          {!DEMO_MODE && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">SMS History</h2>
+              <SMSHistory messages={smsHistory} />
             </div>
           )}
         </div>
