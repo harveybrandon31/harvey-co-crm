@@ -57,7 +57,7 @@ export default async function PipelineStagePage({
 
       {/* Client Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-        <StageClientTable clients={clients} />
+        <StageClientTable clients={clients} showStartProcessing={stageKey === "intake-completed"} />
       </div>
     </div>
   );

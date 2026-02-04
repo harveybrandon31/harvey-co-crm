@@ -783,6 +783,105 @@ function formatTimeAgo(dateString: string): string {
   return `${Math.floor(diffDays / 30)} months ago`;
 }
 
+// --- Intake Pipeline ---
+
+export interface IntakePipelineItem {
+  id: string;
+  token: string;
+  email: string | null;
+  prefillFirstName: string | null;
+  prefillLastName: string | null;
+  clientId: string | null;
+  clientFirstName: string | null;
+  clientLastName: string | null;
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+  intakeCompletedAt: string | null;
+}
+
+export interface IntakePipelineData {
+  sent: IntakePipelineItem[];
+  completed: IntakePipelineItem[];
+  expired: IntakePipelineItem[];
+}
+
+export async function getIntakePipeline(): Promise<IntakePipelineData> {
+  if (DEMO_MODE) {
+    return { sent: [], completed: [], expired: [] };
+  }
+
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+
+  // Fetch all intake links with associated client data
+  const { data: links, error } = await supabase
+    .from("intake_links")
+    .select(`
+      id,
+      token,
+      email,
+      prefill_first_name,
+      prefill_last_name,
+      client_id,
+      created_at,
+      expires_at,
+      used_at,
+      client:clients(id, first_name, last_name, intake_completed_at)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching intake pipeline:", error);
+    return { sent: [], completed: [], expired: [] };
+  }
+
+  interface LinkWithClient {
+    id: string;
+    token: string;
+    email: string | null;
+    prefill_first_name: string | null;
+    prefill_last_name: string | null;
+    client_id: string | null;
+    created_at: string;
+    expires_at: string;
+    used_at: string | null;
+    client: { id: string; first_name: string; last_name: string; intake_completed_at: string | null } | null;
+  }
+
+  const sent: IntakePipelineItem[] = [];
+  const completed: IntakePipelineItem[] = [];
+  const expired: IntakePipelineItem[] = [];
+
+  for (const rawLink of (links || [])) {
+    const link = rawLink as unknown as LinkWithClient;
+    const item: IntakePipelineItem = {
+      id: link.id,
+      token: link.token,
+      email: link.email,
+      prefillFirstName: link.prefill_first_name,
+      prefillLastName: link.prefill_last_name,
+      clientId: link.client_id,
+      clientFirstName: link.client?.first_name || null,
+      clientLastName: link.client?.last_name || null,
+      createdAt: link.created_at,
+      expiresAt: link.expires_at,
+      usedAt: link.used_at,
+      intakeCompletedAt: link.client?.intake_completed_at || null,
+    };
+
+    if (link.used_at) {
+      completed.push(item);
+    } else if (link.expires_at < now) {
+      expired.push(item);
+    } else {
+      sent.push(item);
+    }
+  }
+
+  return { sent, completed, expired };
+}
+
 export interface PendingIntakeReview {
   id: string;
   firstName: string;

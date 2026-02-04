@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { StageClient } from "@/lib/analytics/queries";
+import StartProcessingButton from "./StartProcessingButton";
 
 function formatCurrency(amount: number | null): string {
   if (amount == null) return "—";
@@ -18,7 +19,12 @@ function formatStatus(status: string | null): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export default function StageClientTable({ clients }: { clients: StageClient[] }) {
+interface StageClientTableProps {
+  clients: StageClient[];
+  showStartProcessing?: boolean;
+}
+
+export default function StageClientTable({ clients, showStartProcessing }: StageClientTableProps) {
   if (clients.length === 0) {
     return (
       <div className="text-center py-12">
@@ -54,18 +60,27 @@ export default function StageClientTable({ clients }: { clients: StageClient[] }
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
               Phone
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-              Tax Year
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-              Return Type
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-              Status
-            </th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-              Fee
-            </th>
+            {!showStartProcessing && (
+              <>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                  Tax Year
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                  Return Type
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                  Fee
+                </th>
+              </>
+            )}
+            {showStartProcessing && (
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Action
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -85,18 +100,31 @@ export default function StageClientTable({ clients }: { clients: StageClient[] }
               <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">
                 {client.phone || "—"}
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
-                {client.tax_year || "—"}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
-                {client.return_type || "—"}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
-                {formatStatus(client.status)}
-              </td>
-              <td className="px-4 py-3 text-sm text-gray-600 text-right hidden lg:table-cell">
-                {formatCurrency(client.preparation_fee)}
-              </td>
+              {!showStartProcessing && (
+                <>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+                    {client.tax_year || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+                    {client.return_type || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
+                    {formatStatus(client.status)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 text-right hidden lg:table-cell">
+                    {formatCurrency(client.preparation_fee)}
+                  </td>
+                </>
+              )}
+              {showStartProcessing && (
+                <td className="px-4 py-3 text-right">
+                  <StartProcessingButton
+                    clientId={client.id}
+                    clientName={`${client.first_name} ${client.last_name}`}
+                    compact
+                  />
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

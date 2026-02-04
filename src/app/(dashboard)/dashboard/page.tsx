@@ -4,9 +4,11 @@ import {
   getRecentActivity,
   getUpcomingDeadlines,
   getPendingIntakeReviews,
+  getIntakePipeline,
 } from "@/lib/analytics/queries";
 import PipelineCards from "@/components/dashboard/PipelineCards";
 import RevenueCards from "@/components/dashboard/RevenueCards";
+import IntakePipeline from "@/components/dashboard/IntakePipeline";
 import RecentActivityFeed from "@/components/analytics/RecentActivityFeed";
 import UpcomingDeadlines from "@/components/analytics/UpcomingDeadlines";
 import PendingIntakeReviews from "@/components/analytics/PendingIntakeReviews";
@@ -14,14 +16,17 @@ import PendingIntakeReviews from "@/components/analytics/PendingIntakeReviews";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [pipelineStages, revenueStats, recentActivity, upcomingDeadlines, pendingIntakes] =
+  const [pipelineStages, revenueStats, recentActivity, upcomingDeadlines, pendingIntakes, intakePipeline] =
     await Promise.all([
       getPipelineStages(),
       getRevenueStats(),
       getRecentActivity(8),
       getUpcomingDeadlines(30),
       getPendingIntakeReviews(),
+      getIntakePipeline(),
     ]);
+
+  const totalIntakeLinks = intakePipeline.sent.length + intakePipeline.completed.length + intakePipeline.expired.length;
 
   return (
     <div className="space-y-6">
@@ -84,8 +89,18 @@ export default async function DashboardPage() {
         <PipelineCards stages={pipelineStages} />
       </div>
 
-      {/* Deadlines & Recent Activity */}
+      {/* Intake Pipeline & Deadlines Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Intake Pipeline */}
+        {totalIntakeLinks > 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
+              Intake Pipeline
+            </h2>
+            <IntakePipeline data={intakePipeline} />
+          </div>
+        )}
+
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
             Upcoming Deadlines
@@ -93,13 +108,26 @@ export default async function DashboardPage() {
           <UpcomingDeadlines deadlines={upcomingDeadlines} />
         </div>
 
+        {/* Show activity in second column if no intake links, or as full-width below */}
+        {totalIntakeLinks === 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
+              Recent Activity
+            </h2>
+            <RecentActivityFeed activities={recentActivity} />
+          </div>
+        )}
+      </div>
+
+      {/* Recent Activity - full width when intake pipeline is shown */}
+      {totalIntakeLinks > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
             Recent Activity
           </h2>
           <RecentActivityFeed activities={recentActivity} />
         </div>
-      </div>
+      )}
     </div>
   );
 }

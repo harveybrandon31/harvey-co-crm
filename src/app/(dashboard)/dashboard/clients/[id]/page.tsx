@@ -10,6 +10,7 @@ import SendEmailButton from "@/components/clients/SendEmailButton";
 import SendSMSButton from "@/components/clients/SendSMSButton";
 import IntakeAnswers from "@/components/clients/IntakeAnswers";
 import RevealSSN from "@/components/clients/RevealSSN";
+import StartProcessingButton from "@/components/pipeline/StartProcessingButton";
 
 interface IntakeResponse {
   question_key: string;
@@ -516,6 +517,15 @@ export default async function ClientDetailPage({
                 <p className="text-xs text-gray-500 mt-3">
                   Intake completed: {new Date(client.intake_completed_at).toLocaleDateString()}
                 </p>
+              )}
+              {/* Start Processing button — shown when intake is complete but no current-year tax return */}
+              {client.intake_completed && (!taxReturns || taxReturns.filter(r => r.tax_year === new Date().getFullYear()).length === 0) && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <StartProcessingButton
+                    clientId={id}
+                    clientName={`${client.first_name} ${client.last_name}`}
+                  />
+                </div>
               )}
             </div>
           )}
