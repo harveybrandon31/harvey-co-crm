@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const AUTH_DISABLED = false;
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ["/", "/intake", "/upload"];
+const PUBLIC_ROUTES = ["/", "/intake", "/upload", "/api/intake"];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;

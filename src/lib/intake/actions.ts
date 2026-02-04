@@ -95,7 +95,10 @@ export interface ValidateIntakeLinkResult {
  */
 export async function validateIntakeLink(token: string): Promise<ValidateIntakeLinkResult> {
   try {
-    const supabase = await createClient();
+    // Use admin client to bypass RLS — intake links must be readable by
+    // unauthenticated clients who don't have a Supabase session.
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
 
     const { data: link, error } = await supabase
       .from("intake_links")
