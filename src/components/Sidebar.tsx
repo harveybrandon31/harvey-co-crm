@@ -1,11 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+const pipelineSubItems = [
+  { key: "intake-completed", label: "Intake Completed" },
+  { key: "pending-tasks", label: "Pending Tasks" },
+  { key: "in-progress", label: "In Progress" },
+  { key: "client-review", label: "Client Review" },
+  { key: "ready-to-file", label: "Ready to File" },
+  { key: "submitted", label: "Submitted" },
+  { key: "accepted", label: "Accepted" },
+];
+
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
-  { name: "Pipeline", href: "/dashboard/pipeline", icon: KanbanIcon },
   { name: "Clients", href: "/dashboard/clients", icon: UsersIcon },
   { name: "Tasks", href: "/dashboard/tasks", icon: TasksIcon },
   { name: "Intake Links", href: "/dashboard/intake-links", icon: LinkIcon },
@@ -13,6 +23,7 @@ const navigation = [
   { name: "Invoices", href: "/dashboard/invoices", icon: InvoiceIcon },
   { name: "Documents", href: "/dashboard/documents", icon: FolderIcon },
   { name: "Reports", href: "/dashboard/reports", icon: ReportsIcon },
+  { name: "Marketing", href: "/dashboard/marketing", icon: MegaphoneIcon },
   { name: "Settings", href: "/dashboard/settings", icon: SettingsIcon },
 ];
 
@@ -97,8 +108,32 @@ function TasksIcon({ className }: { className?: string }) {
   );
 }
 
+function MegaphoneIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ className, expanded }: { className?: string; expanded: boolean }) {
+  return (
+    <svg
+      className={`${className} transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const isPipelinePage = pathname.startsWith("/dashboard/pipeline");
+  const [pipelineOpen, setPipelineOpen] = useState(isPipelinePage);
 
   return (
     <div className="flex h-full w-64 flex-col bg-[#2D4A43]">
@@ -112,9 +147,81 @@ export default function Sidebar() {
           </p>
         </div>
       </div>
-      <nav className="flex flex-1 flex-col px-3 py-4">
+      <nav className="flex flex-1 flex-col px-3 py-4 overflow-y-auto">
         <ul className="flex flex-1 flex-col gap-1">
-          {navigation.map((item) => {
+          {/* Pipeline with sub-nav — placed after Dashboard */}
+          {navigation.slice(0, 1).map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <li key={item.name}>
+                <Link
+                  href={item.href}
+                  className={`group flex gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-white/15 text-white shadow-sm"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {item.name}
+                </Link>
+              </li>
+            );
+          })}
+
+          {/* Pipeline collapsible section */}
+          <li>
+            <button
+              onClick={() => setPipelineOpen(!pipelineOpen)}
+              className={`w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                isPipelinePage
+                  ? "bg-white/15 text-white shadow-sm"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <KanbanIcon className="h-5 w-5 shrink-0" />
+              <span className="flex-1 text-left">Pipeline</span>
+              <ChevronIcon className="h-3.5 w-3.5 shrink-0" expanded={pipelineOpen} />
+            </button>
+
+            {pipelineOpen && (
+              <ul className="mt-1 ml-5 space-y-0.5">
+                <li>
+                  <Link
+                    href="/dashboard/pipeline"
+                    className={`block rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                      pathname === "/dashboard/pipeline"
+                        ? "bg-white/10 text-white"
+                        : "text-white/50 hover:bg-white/5 hover:text-white/80"
+                    }`}
+                  >
+                    Board View
+                  </Link>
+                </li>
+                {pipelineSubItems.map((sub) => {
+                  const subHref = `/dashboard/pipeline/${sub.key}`;
+                  const isSubActive = pathname === subHref;
+                  return (
+                    <li key={sub.key}>
+                      <Link
+                        href={subHref}
+                        className={`block rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                          isSubActive
+                            ? "bg-white/10 text-white"
+                            : "text-white/50 hover:bg-white/5 hover:text-white/80"
+                        }`}
+                      >
+                        {sub.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </li>
+
+          {/* Remaining navigation items */}
+          {navigation.slice(1).map((item) => {
             const isActive = pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (

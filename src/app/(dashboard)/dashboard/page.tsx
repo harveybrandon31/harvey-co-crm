@@ -1,38 +1,31 @@
 import {
-  getDashboardStats,
-  getReturnStatusBreakdown,
-  getMonthlyFilingData,
+  getPipelineStages,
+  getRevenueStats,
   getRecentActivity,
   getUpcomingDeadlines,
-  getClientOverview,
   getPendingIntakeReviews,
 } from "@/lib/analytics/queries";
-import StatsCards from "@/components/analytics/StatsCards";
-import StatusPieChart from "@/components/analytics/StatusPieChart";
-import MonthlyFilingsChart from "@/components/analytics/MonthlyFilingsChart";
+import PipelineCards from "@/components/dashboard/PipelineCards";
+import RevenueCards from "@/components/dashboard/RevenueCards";
 import RecentActivityFeed from "@/components/analytics/RecentActivityFeed";
 import UpcomingDeadlines from "@/components/analytics/UpcomingDeadlines";
-import ClientOverview from "@/components/analytics/ClientOverview";
 import PendingIntakeReviews from "@/components/analytics/PendingIntakeReviews";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const currentYear = new Date().getFullYear();
-
-  const [stats, statusBreakdown, monthlyData, recentActivity, upcomingDeadlines, clientOverview, pendingIntakes] =
+  const [pipelineStages, revenueStats, recentActivity, upcomingDeadlines, pendingIntakes] =
     await Promise.all([
-      getDashboardStats(),
-      getReturnStatusBreakdown(),
-      getMonthlyFilingData(currentYear),
+      getPipelineStages(),
+      getRevenueStats(),
       getRecentActivity(8),
       getUpcomingDeadlines(30),
-      getClientOverview(),
       getPendingIntakeReviews(),
     ]);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-brand-heading text-2xl font-semibold text-gray-900">
@@ -80,50 +73,32 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Stats Cards */}
-      <StatsCards stats={stats} />
+      {/* Revenue Cards */}
+      <RevenueCards stats={revenueStats} />
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
-            Return Status Breakdown
-          </h2>
-          <StatusPieChart data={statusBreakdown} />
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-          <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
-            {currentYear} Filing Activity
-          </h2>
-          <MonthlyFilingsChart data={monthlyData} />
-        </div>
+      {/* Client Pipeline */}
+      <div>
+        <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
+          Client Pipeline
+        </h2>
+        <PipelineCards stages={pipelineStages} />
       </div>
 
-      {/* Client Overview & Deadlines Row */}
+      {/* Deadlines & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ClientOverview
-          totalClients={clientOverview.totalClients}
-          activeClients={clientOverview.activeClients}
-          newIntakes={clientOverview.newIntakes}
-          pendingDocuments={clientOverview.pendingDocuments}
-          recentClients={clientOverview.recentClients}
-        />
-
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
           <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
             Upcoming Deadlines
           </h2>
           <UpcomingDeadlines deadlines={upcomingDeadlines} />
         </div>
-      </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
-          Recent Activity
-        </h2>
-        <RecentActivityFeed activities={recentActivity} />
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+          <h2 className="font-brand-heading text-lg font-semibold text-gray-900 mb-4">
+            Recent Activity
+          </h2>
+          <RecentActivityFeed activities={recentActivity} />
+        </div>
       </div>
     </div>
   );

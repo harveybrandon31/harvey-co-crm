@@ -475,6 +475,301 @@ export async function getClientOverview(): Promise<ClientOverviewStats> {
   };
 }
 
+// --- Pipeline Stage Definitions ---
+
+export interface PipelineStage {
+  key: string;
+  label: string;
+  count: number;
+  clients: { id: string; first_name: string; last_name: string }[];
+  color: string;
+}
+
+const PIPELINE_STAGES = [
+  { key: "intake-completed", label: "Intake Completed", color: "blue", statuses: [] as string[] },
+  { key: "pending-tasks", label: "Pending Tasks", color: "amber", statuses: ["not_started", "rejected"] },
+  { key: "in-progress", label: "In Progress", color: "indigo", statuses: ["in_progress"] },
+  { key: "client-review", label: "Client Review", color: "purple", statuses: ["pending_review", "pending_client"] },
+  { key: "ready-to-file", label: "Ready to File", color: "emerald", statuses: ["ready_to_file"] },
+  { key: "submitted", label: "Submitted", color: "sky", statuses: ["filed"] },
+  { key: "accepted", label: "Accepted", color: "green", statuses: ["accepted"] },
+];
+
+export function getPipelineStageConfig() {
+  return PIPELINE_STAGES;
+}
+
+export async function getPipelineStages(): Promise<PipelineStage[]> {
+  if (DEMO_MODE) {
+    // Build from mock data — assign clients to stages based on their most recent return
+    const clientReturns: Record<string, typeof mockTaxReturns[0] | null> = {};
+    mockClients.forEach((c) => {
+      // Find most recent return for each client
+      const returns = mockTaxReturns
+        .filter((r) => r.client_id === c.id)
+        .sort((a, b) => b.tax_year - a.tax_year);
+      clientReturns[c.id] = returns[0] || null;
+    });
+
+    return PIPELINE_STAGES.map((stage) => {
+      let clients: { id: string; first_name: string; last_name: string }[];
+
+      if (stage.key === "intake-completed") {
+        // Clients with no tax returns (or only old completed ones)
+        clients = mockClients
+          .filter((c) => {
+            const ret = clientReturns[c.id];
+            return !ret || (ret.status === "accepted" && ret.tax_year < new Date().getFullYear());
+          })
+          .map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }));
+      } else {
+        clients = mockClients
+          .filter((c) => {
+            const ret = clientReturns[c.id];
+            return ret && stage.statuses.includes(ret.status);
+          })
+          .map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }));
+      }
+
+      return {
+        key: stage.key,
+        label: stage.label,
+        count: clients.length,
+        clients,
+        color: stage.color,
+      };
+    });
+  }
+
+  const supabase = await createClient();
+
+  // Get all clients that completed intake, with their most recent tax return
+  const { data: clients } = await supabase
+    .from("clients")
+    .select("id, first_name, last_name, intake_completed")
+    .eq("intake_completed", true);
+
+  const { data: taxReturns } = await supabase
+    .from("tax_returns")
+    .select("id, client_id, status, tax_year")
+    .order("tax_year", { ascending: false });
+
+  // Build a map of client_id -> most recent tax return
+  const clientReturnMap: Record<string, { status: string; tax_year: number }> = {};
+  (taxReturns || []).forEach((r) => {
+    if (!clientReturnMap[r.client_id]) {
+      clientReturnMap[r.client_id] = { status: r.status, tax_year: r.tax_year };
+    }
+  });
+
+  return PIPELINE_STAGES.map((stage) => {
+    let stageClients: { id: string; first_name: string; last_name: string }[];
+
+    if (stage.key === "intake-completed") {
+      // Clients who completed intake but have no current-year tax return in progress
+      stageClients = (clients || [])
+        .filter((c) => !clientReturnMap[c.id])
+        .map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }));
+    } else {
+      stageClients = (clients || [])
+        .filter((c) => {
+          const ret = clientReturnMap[c.id];
+          return ret && stage.statuses.includes(ret.status);
+        })
+        .map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name }));
+    }
+
+    return {
+      key: stage.key,
+      label: stage.label,
+      count: stageClients.length,
+      clients: stageClients,
+      color: stage.color,
+    };
+  });
+}
+
+export interface RevenueStats {
+  collectedRevenue: number;
+  pipelineRevenue: number;
+  pipelineCount: number;
+}
+
+export async function getRevenueStats(): Promise<RevenueStats> {
+  if (DEMO_MODE) {
+    const collected = mockTaxReturns
+      .filter((r) => r.fee_paid && r.preparation_fee)
+      .reduce((sum, r) => sum + (r.preparation_fee || 0), 0);
+
+    // Active clients with non-completed returns
+    const activeStatuses = ["not_started", "in_progress", "pending_review", "pending_client", "ready_to_file"];
+    const pipelineClients = new Set(
+      mockTaxReturns
+        .filter((r) => activeStatuses.includes(r.status))
+        .map((r) => r.client_id)
+    );
+
+    return {
+      collectedRevenue: collected,
+      pipelineRevenue: pipelineClients.size * 1000,
+      pipelineCount: pipelineClients.size,
+    };
+  }
+
+  const supabase = await createClient();
+
+  const [collectedResult, pipelineResult] = await Promise.all([
+    supabase
+      .from("tax_returns")
+      .select("preparation_fee")
+      .eq("fee_paid", true),
+    supabase
+      .from("tax_returns")
+      .select("client_id")
+      .in("status", ["not_started", "in_progress", "pending_review", "pending_client", "ready_to_file"]),
+  ]);
+
+  const collectedRevenue = (collectedResult.data || []).reduce(
+    (sum, r) => sum + (r.preparation_fee || 0),
+    0
+  );
+
+  const uniquePipelineClients = new Set((pipelineResult.data || []).map((r) => r.client_id));
+
+  return {
+    collectedRevenue,
+    pipelineRevenue: uniquePipelineClients.size * 1000,
+    pipelineCount: uniquePipelineClients.size,
+  };
+}
+
+export interface StageClient {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  tax_year: number | null;
+  return_type: string | null;
+  status: string | null;
+  preparation_fee: number | null;
+}
+
+export async function getClientsForStage(stageKey: string): Promise<StageClient[]> {
+  const stage = PIPELINE_STAGES.find((s) => s.key === stageKey);
+  if (!stage) return [];
+
+  if (DEMO_MODE) {
+    const clientReturns: Record<string, typeof mockTaxReturns[0] | null> = {};
+    mockClients.forEach((c) => {
+      const returns = mockTaxReturns
+        .filter((r) => r.client_id === c.id)
+        .sort((a, b) => b.tax_year - a.tax_year);
+      clientReturns[c.id] = returns[0] || null;
+    });
+
+    if (stageKey === "intake-completed") {
+      return mockClients
+        .filter((c) => {
+          const ret = clientReturns[c.id];
+          return !ret || (ret.status === "accepted" && ret.tax_year < new Date().getFullYear());
+        })
+        .map((c) => ({
+          id: c.id,
+          first_name: c.first_name,
+          last_name: c.last_name,
+          email: c.email,
+          phone: c.phone,
+          tax_year: null,
+          return_type: null,
+          status: null,
+          preparation_fee: null,
+        }));
+    }
+
+    return mockClients
+      .filter((c) => {
+        const ret = clientReturns[c.id];
+        return ret && stage.statuses.includes(ret.status);
+      })
+      .map((c) => {
+        const ret = clientReturns[c.id]!;
+        return {
+          id: c.id,
+          first_name: c.first_name,
+          last_name: c.last_name,
+          email: c.email,
+          phone: c.phone,
+          tax_year: ret.tax_year,
+          return_type: ret.return_type,
+          status: ret.status,
+          preparation_fee: ret.preparation_fee,
+        };
+      });
+  }
+
+  const supabase = await createClient();
+
+  if (stageKey === "intake-completed") {
+    // Clients who completed intake but have no tax returns
+    const { data: clients } = await supabase
+      .from("clients")
+      .select("id, first_name, last_name, email, phone")
+      .eq("intake_completed", true);
+
+    const { data: taxReturns } = await supabase
+      .from("tax_returns")
+      .select("client_id");
+
+    const clientsWithReturns = new Set((taxReturns || []).map((r) => r.client_id));
+
+    return (clients || [])
+      .filter((c) => !clientsWithReturns.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        email: c.email,
+        phone: c.phone,
+        tax_year: null,
+        return_type: null,
+        status: null,
+        preparation_fee: null,
+      }));
+  }
+
+  // For all other stages, query by tax return status
+  const { data } = await supabase
+    .from("tax_returns")
+    .select("client_id, tax_year, return_type, status, preparation_fee, clients(id, first_name, last_name, email, phone)")
+    .in("status", stage.statuses)
+    .order("tax_year", { ascending: false });
+
+  interface ReturnWithClient {
+    client_id: string;
+    tax_year: number;
+    return_type: string;
+    status: string;
+    preparation_fee: number | null;
+    clients: { id: string; first_name: string; last_name: string; email: string | null; phone: string | null };
+  }
+
+  return (data || []).map((r) => {
+    const row = r as unknown as ReturnWithClient;
+    return {
+      id: row.clients.id,
+      first_name: row.clients.first_name,
+      last_name: row.clients.last_name,
+      email: row.clients.email,
+      phone: row.clients.phone,
+      tax_year: row.tax_year,
+      return_type: row.return_type,
+      status: row.status,
+      preparation_fee: row.preparation_fee,
+    };
+  });
+}
+
 function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
